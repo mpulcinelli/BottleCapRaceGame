@@ -1,0 +1,16 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{00043AAE-08DA-7A4A-8030-530E17FEBC9A}",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "BottleCapRaceGame",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine"
+			]
+		}
+	]
+}
