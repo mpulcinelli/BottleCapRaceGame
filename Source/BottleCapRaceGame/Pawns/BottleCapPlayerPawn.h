@@ -26,11 +26,10 @@ public:
 	UPROPERTY(EditAnywhere)
 	class UTextRenderComponent *PlayerName;
 
-	UPROPERTY(EditAnywhere)
-	class UTextRenderComponent *PlayerNameV2;
-
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_MyName)
 	FText MyName;
+
+
 
 	UPROPERTY(EditAnywhere)
 	class UWidgetComponent *AccumulatorVisual;
@@ -43,6 +42,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Input)
 	float WeightKG = 150.0f;
+
+	UPROPERTY(Replicated)
+	bool CanIMoveMe=false;
 
 	UFUNCTION(Server, Reliable)
 	void Server_MoveForward(float AxisValue, FRotator Rotation);
@@ -58,6 +60,7 @@ public:
 	void Server_ProvokeImpulse(FVector Impulse);
 	void Server_ProvokeImpulse_Implementation(FVector Impulse);
 
+
 	void Turn(float AxisValue);
 
 	void LookUp(float AxisValue);
@@ -70,9 +73,9 @@ public:
 
 	void IncrementAccumulation();
 
-	UFUNCTION(Server, Reliable)
-	void Server_TurnPlayerUp();
-	void Server_TurnPlayerUp_Implementation();
+	// UFUNCTION(Server, Reliable)
+	// void Server_TurnPlayerUp();
+	// void Server_TurnPlayerUp_Implementation();
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Server_UpdateMyName(const FText & _MyName);
@@ -80,7 +83,12 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const override;
 
+
+
 private:
+
+	UFUNCTION()
+	void OnServerChangePlayerToPlay(int32 id);
 
 	UPROPERTY(Replicated)
 	float PowerAccumulated = 0.0f;
@@ -94,12 +102,16 @@ private:
 
 	FTimerHandle AccumulatePowerHandle;
 	FTimerHandle TurnPlayerUpHandle;
+	FTimerHandle CheckIfICanMoveUpHandle;
 
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_PosChange)
 	FVector CurrentPosition;
 
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_RotChange)
 	FRotator CurrentRotation;
+
+	UPROPERTY(Transient, ReplicatedUsing = OnRep_InternalId)
+	int32 InternalId;
 
 	UPROPERTY(Replicated)
 	bool IsFallen = false;
@@ -116,6 +128,8 @@ private:
 	UFUNCTION()
 	void OnRep_MyName();
 
+	UFUNCTION()
+	void OnRep_InternalId();
 
 protected:
 	// Called when the game starts or when spawned

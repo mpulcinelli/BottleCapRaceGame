@@ -18,9 +18,9 @@
 #include "Components/DecalComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "BottleCapPlayerState.h"
+#include "BottleCapRaceGame/BottleCapRaceGameGameModeBase.h"
 
-// Sets default values
-ABottleCapPlayerPawn::ABottleCapPlayerPawn()
+ABottleCapPlayerPawn::ABottleCapPlayerPawn() : InternalId(1)
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
@@ -83,11 +83,11 @@ ABottleCapPlayerPawn::ABottleCapPlayerPawn()
 	PlayerName->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
 	PlayerName->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
 
-	PlayerNameV2 = CreateDefaultSubobject<UTextRenderComponent>(TEXT("PlayerNameV2"));
-	PlayerNameV2->SetupAttachment(RootComponent);
-	PlayerNameV2->SetRelativeLocation(FVector(30.0f, 0.0f, 286.0f));
-	PlayerNameV2->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
-	PlayerNameV2->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
+	// PlayerNameV2 = CreateDefaultSubobject<UTextRenderComponent>(TEXT("PlayerNameV2"));
+	// PlayerNameV2->SetupAttachment(RootComponent);
+	// PlayerNameV2->SetRelativeLocation(FVector(30.0f, 0.0f, 286.0f));
+	// PlayerNameV2->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
+	// PlayerNameV2->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
 
 	USpringArmComponent *SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraAttachmentArm"));
 	SpringArm->SetupAttachment(RootComponent);
@@ -135,8 +135,8 @@ void ABottleCapPlayerPawn::Server_MoveForward_Implementation(float AxisValue, FR
 	{
 		SetActorRotation(Rotation);
 		CurrentRotation = Rotation;
-		SelfMovementComponent->AddInputVector(GetActorForwardVector() * AxisValue);
-		CurrentPosition = GetActorLocation();
+		//SelfMovementComponent->AddInputVector(GetActorForwardVector() * AxisValue);
+		//CurrentPosition = GetActorLocation();
 	}
 }
 
@@ -157,13 +157,20 @@ void ABottleCapPlayerPawn::Server_MoveRight_Implementation(float AxisValue, FRot
 	{
 		SetActorRotation(Rotation);
 		CurrentRotation = Rotation;
-		SelfMovementComponent->AddInputVector(GetActorRightVector() * AxisValue);
-		CurrentPosition = GetActorLocation();
+		//SelfMovementComponent->AddInputVector(GetActorRightVector() * AxisValue);
+		//CurrentPosition = GetActorLocation();
 	}
 }
 
 void ABottleCapPlayerPawn::Server_ProvokeImpulse_Implementation(FVector Impulse)
 {
+
+	ABottleCapRaceGameGameModeBase *GM = Cast<ABottleCapRaceGameGameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (GM)
+	{
+		GM->MoveCap();
+	}
+
 	SphereVisual->AddImpulse(Impulse);
 }
 
@@ -174,8 +181,9 @@ void ABottleCapPlayerPawn::Turn(float AxisValue)
 
 void ABottleCapPlayerPawn::AccumulateStart()
 {
-	if (IsLocallyControlled())
+	if (IsLocallyControlled() && CanIMoveMe)
 	{
+		//CanIMove();
 		PointDirectionDecal->SetVisibility(true, true);
 		GetWorld()->GetTimerManager().SetTimer(AccumulatePowerHandle, this, &ABottleCapPlayerPawn::IncrementAccumulation, 0.1f, true, 0.0f);
 		AccumulatorVisual->SetVisibility(true, true);
@@ -184,7 +192,8 @@ void ABottleCapPlayerPawn::AccumulateStart()
 
 void ABottleCapPlayerPawn::AccumulateStop()
 {
-	if (IsLocallyControlled())
+
+	if (IsLocallyControlled() && CanIMoveMe)
 	{
 		GetWorld()->GetTimerManager().ClearTimer(AccumulatePowerHandle);
 
@@ -212,13 +221,13 @@ void ABottleCapPlayerPawn::IncrementAccumulation()
 	}
 }
 
-void ABottleCapPlayerPawn::Server_TurnPlayerUp_Implementation()
-{
-	SphereVisual->SetSimulatePhysics(false);
-	FRotator MyRotation = SphereVisual->GetComponentRotation();
-	auto NewRot = FMath::RInterpTo(MyRotation, FRotator(0.0f, 0.0f, 0.0f), GetWorld()->GetDeltaSeconds(), 100.0f);
-	SphereVisual->SetWorldRotation(FRotator(0.0f, 0.0f, 0.0f));
-}
+// void ABottleCapPlayerPawn::Server_TurnPlayerUp_Implementation()
+// {
+// 	SphereVisual->SetSimulatePhysics(false);
+// 	FRotator MyRotation = SphereVisual->GetComponentRotation();
+// 	auto NewRot = FMath::RInterpTo(MyRotation, FRotator(0.0f, 0.0f, 0.0f), GetWorld()->GetDeltaSeconds(), 100.0f);
+// 	SphereVisual->SetWorldRotation(FRotator(0.0f, 0.0f, 0.0f));
+// }
 
 void ABottleCapPlayerPawn::Server_UpdateMyName_Implementation(const FText &_MyName)
 {
@@ -234,10 +243,11 @@ void ABottleCapPlayerPawn::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> 
 	DOREPLIFETIME(ABottleCapPlayerPawn, IsFallen);
 	DOREPLIFETIME(ABottleCapPlayerPawn, CurrentPosition);
 	DOREPLIFETIME(ABottleCapPlayerPawn, CurrentRotation);
-
 	DOREPLIFETIME(ABottleCapPlayerPawn, SelfMovementComponent);
 	DOREPLIFETIME(ABottleCapPlayerPawn, SphereVisual);
 	DOREPLIFETIME(ABottleCapPlayerPawn, MyName);
+	DOREPLIFETIME(ABottleCapPlayerPawn, InternalId);
+	DOREPLIFETIME(ABottleCapPlayerPawn, CanIMoveMe);
 }
 
 void ABottleCapPlayerPawn::LookUp(float AxisValue)
@@ -257,18 +267,19 @@ void ABottleCapPlayerPawn::BeginPlay()
 
 	if (HasAuthority())
 	{
-		auto MyNumber = FMath::RandRange(10, 1000);
-		MyName = FText::AsNumber(MyNumber);
+		TArray<AActor *> OutActors;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), APawn::StaticClass(), OutActors);
+
+		InternalId = OutActors.Num();
+
+		MyName = FText::AsNumber(InternalId);
 
 		Server_UpdateMyName(MyName);
 
-		auto PS = GetPlayerState<ABottleCapPlayerState>();
-		if (PS)
+		ABottleCapRaceGameGameModeBase *GM = Cast<ABottleCapRaceGameGameModeBase>(GetWorld()->GetAuthGameMode());
+		if (GM)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("ENTREI NO PS!!!"));
-
-			PS->SetMyName(MyName.ToString());
-			PlayerNameV2->SetText(FText::FromString(PS->GetMyName()));
+			GM->OnChangePlayerToPlay.AddDynamic(this, &ABottleCapPlayerPawn::OnServerChangePlayerToPlay);
 		}
 	}
 
@@ -284,6 +295,11 @@ void ABottleCapPlayerPawn::BeginPlay()
 	UGameplayStatics::GetPlayerController(GetWorld(), 0)->bShowMouseCursor = true;
 }
 
+void ABottleCapPlayerPawn::OnServerChangePlayerToPlay(int32 id)
+{
+	CanIMoveMe = InternalId == id;
+}
+
 void ABottleCapPlayerPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -291,7 +307,7 @@ void ABottleCapPlayerPawn::Tick(float DeltaTime)
 	if (SphereVisual->GetUpVector().Z <= 0.0f && !IsFallen)
 	{
 		IsFallen = true;
-		Server_TurnPlayerUp();
+		// Server_TurnPlayerUp();
 	}
 	else if (SphereVisual->GetUpVector().Z >= 1.0f && IsFallen)
 	{
@@ -332,3 +348,9 @@ void ABottleCapPlayerPawn::OnRep_MyName()
 	PlayerName->SetText(MyName);
 	UE_LOG(LogTemp, Warning, TEXT("OnRep_MyName: %s"), *MyName.ToString());
 }
+
+void ABottleCapPlayerPawn::OnRep_InternalId()
+{
+	UE_LOG(LogTemp, Warning, TEXT("OnRep_InternalId: %d"), InternalId);
+}
+

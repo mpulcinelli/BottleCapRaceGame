@@ -5,5 +5,4 @@
 ABottleCapPlayerController::ABottleCapPlayerController()
 {
     PrimaryActorTick.bCanEverTick = true;
-    bReplicates = true;
 }
