@@ -7,6 +7,7 @@
 #include "BottleCapRaceGameGameModeBase.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPlayerToPlaySignature, int32, PlayerToPlay);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRemainingMovesSignature, int32, RemainingMoves);
 
 /**
  *
@@ -22,6 +23,10 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FPlayerToPlaySignature OnChangePlayerToPlay;
+
+	UPROPERTY(BlueprintAssignable)
+	FRemainingMovesSignature OnChangeRemainingMoves;
+
 
 	/**
 	 * Recupera o player que pode jogar.

@@ -34,9 +34,10 @@ void ABottleCapRaceGameGameModeBase::MoveCap()
 {
     int32 Num = GetGameState<ABottleCapGameState>()->NumOfFlicks;
 
-    if (Num > 0)
+    if (Num > 1)
     {
         GetGameState<ABottleCapGameState>()->NumOfFlicks = Num - 1;
+        OnChangeRemainingMoves.Broadcast(GetPlayerRemainingMoves());
     }
     else
     {
@@ -55,14 +56,17 @@ void ABottleCapRaceGameGameModeBase::MoveCap()
         }
 
         OnChangePlayerToPlay.Broadcast(GetPlayerIdToPlay());
+        OnChangeRemainingMoves.Broadcast(GetPlayerRemainingMoves());
     }
 }
 
 void ABottleCapRaceGameGameModeBase::GameWelcomePlayer(UNetConnection *Connection, FString &RedirectURL){
+    
     Super::GameWelcomePlayer(Connection, RedirectURL);
 
     UE_LOG(LogTemp, Warning, TEXT("GameWelcomePlayer"));
     
     OnChangePlayerToPlay.Broadcast(GetPlayerIdToPlay());
+    OnChangeRemainingMoves.Broadcast(GetPlayerRemainingMoves());
 
 }

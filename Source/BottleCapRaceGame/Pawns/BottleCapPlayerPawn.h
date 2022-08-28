@@ -15,20 +15,18 @@ public:
 	// Sets default values for this pawn's properties
 	ABottleCapPlayerPawn();
 
-	UPROPERTY(Replicated)
-	class UBottleCapPawnMovementComponent *SelfMovementComponent;
-
-	virtual UPawnMovementComponent *GetMovementComponent() const override;
-
 	UPROPERTY(EditAnywhere, Replicated)
 	class UStaticMeshComponent *SphereVisual;
 
 	UPROPERTY(EditAnywhere)
 	class UTextRenderComponent *PlayerName;
 
+	UPROPERTY(EditAnywhere)
+	class UTextRenderComponent *PlayerRemainingMoves;
+
+
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_MyName)
 	FText MyName;
-
 
 
 	UPROPERTY(EditAnywhere)
@@ -46,24 +44,32 @@ public:
 	UPROPERTY(Replicated)
 	bool CanIMoveMe=false;
 
-	UFUNCTION(Server, Reliable)
-	void Server_MoveForward(float AxisValue, FRotator Rotation);
-	void Server_MoveForward_Implementation(float AxisValue, FRotator Rotation);
-	void MoveForward(float AxisValue);
+	UPROPERTY(Transient, ReplicatedUsing = OnRep_RemainingMoves)
+	int32 RemainingMoves=0;
 
-	UFUNCTION(Server, Reliable)
-	void Server_MoveRight(float AxisValue, FRotator Rotation);
-	void Server_MoveRight_Implementation(float AxisValue, FRotator Rotation);
-	void MoveRight(float AxisValue);
 
 	UFUNCTION(Server, Reliable)
 	void Server_ProvokeImpulse(FVector Impulse);
 	void Server_ProvokeImpulse_Implementation(FVector Impulse);
 
 
+	UFUNCTION(Server, Reliable)
+	void Server_Turn(FRotator AxisValue);
+	void Server_Turn_Implementation(FRotator AxisValue);
 	void Turn(float AxisValue);
 
+
+	UFUNCTION(Server, Reliable)
+	void Server_LookUp(FRotator AxisValue);
+	void Server_LookUp_Implementation(FRotator AxisValue);
 	void LookUp(float AxisValue);
+
+	UFUNCTION(Server, Reliable)
+	void Server_UpdatePlayerRemainingMoves(int32 qtd);
+	void Server_UpdatePlayerRemainingMoves_Implementation(int32 qtd);
+
+
+
 
 	UFUNCTION()
 	void AccumulateStart();
@@ -72,10 +78,6 @@ public:
 	void AccumulateStop();
 
 	void IncrementAccumulation();
-
-	// UFUNCTION(Server, Reliable)
-	// void Server_TurnPlayerUp();
-	// void Server_TurnPlayerUp_Implementation();
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Server_UpdateMyName(const FText & _MyName);
@@ -90,6 +92,10 @@ private:
 	UFUNCTION()
 	void OnServerChangePlayerToPlay(int32 id);
 
+	UFUNCTION()
+	void OnServerChangeRemainingMoves(int32 qtd);
+
+
 	UPROPERTY(Replicated)
 	float PowerAccumulated = 0.0f;
 
@@ -100,27 +106,16 @@ private:
 	UPROPERTY(EditAnywhere)
 	class UDecalComponent* PointDirectionDecal;
 
-	FTimerHandle AccumulatePowerHandle;
-	FTimerHandle TurnPlayerUpHandle;
-	FTimerHandle CheckIfICanMoveUpHandle;
-
-	UPROPERTY(Transient, ReplicatedUsing = OnRep_PosChange)
-	FVector CurrentPosition;
-
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_RotChange)
 	FRotator CurrentRotation;
 
+	FTimerHandle AccumulatePowerHandle;
+	
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_InternalId)
 	int32 InternalId;
 
-	UPROPERTY(Replicated)
-	bool IsFallen = false;
 
-	UFUNCTION()
-	void OnHit(UPrimitiveComponent *HitComponent, AActor *OtherActor, UPrimitiveComponent *OtherComponent, FVector NormalImpulse, const FHitResult &Hit);
 
-	UFUNCTION()
-	void OnRep_PosChange();
 
 	UFUNCTION()
 	void OnRep_RotChange();
@@ -130,6 +125,9 @@ private:
 
 	UFUNCTION()
 	void OnRep_InternalId();
+
+	UFUNCTION()
+	void OnRep_RemainingMoves();
 
 protected:
 	// Called when the game starts or when spawned
