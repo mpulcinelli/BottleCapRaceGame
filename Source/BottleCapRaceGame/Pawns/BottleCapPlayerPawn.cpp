@@ -83,9 +83,15 @@ ABottleCapPlayerPawn::ABottleCapPlayerPawn() : InternalId(1)
 
 	PlayerRemainingMoves = CreateDefaultSubobject<UTextRenderComponent>(TEXT("PlayerRemainingMoves"));
 	PlayerRemainingMoves->SetupAttachment(RootComponent);
-	PlayerRemainingMoves->SetRelativeLocation(FVector(-100.0f, 0.0f, 186.0f));
+	PlayerRemainingMoves->SetRelativeLocation(FVector(0.0f, 0.0f, 186.0f));
 	PlayerRemainingMoves->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
 	PlayerRemainingMoves->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
+
+	static ConstructorHelpers::FObjectFinder<UMaterial> MatRemainingMoves(TEXT("/Game/Materials/MAT_RemainingMoves"));
+	if (MatRemainingMoves.Succeeded())
+	{
+		PlayerRemainingMoves->SetMaterial(0, MatRemainingMoves.Object);
+	}
 
 	USpringArmComponent *SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraAttachmentArm"));
 	SpringArm->SetupAttachment(RootComponent);
@@ -138,6 +144,8 @@ void ABottleCapPlayerPawn::BeginPlay()
 			GM->OnChangePlayerToPlay.AddDynamic(this, &ABottleCapPlayerPawn::OnServerChangePlayerToPlay);
 			GM->OnChangeRemainingMoves.AddDynamic(this, &ABottleCapPlayerPawn::OnServerChangeRemainingMoves);
 			RemainingMoves = GM->GetPlayerRemainingMoves();
+			Server_UpdatePlayerRemainingMoves(RemainingMoves);
+
 		}
 	}
 
@@ -151,6 +159,19 @@ void ABottleCapPlayerPawn::BeginPlay()
 void ABottleCapPlayerPawn::Server_UpdatePlayerRemainingMoves_Implementation(int32 qtd)
 {
 	RemainingMoves = qtd;
+
+
+	if (IsLocallyControlled() && CanIMoveMe)
+	{
+		PlayerRemainingMoves->SetVisibility(true);
+		PlayerRemainingMoves->SetText(FText::AsNumber(qtd));
+	}
+	else
+	{
+		PlayerRemainingMoves->SetVisibility(false);
+		PlayerRemainingMoves->SetText(FText::AsNumber(0));
+	}
+
 	// PlayerRemainingMoves->SetText(FText::AsNumber(qtd));
 	UE_LOG(LogTemp, Warning, TEXT("Server_UpdatePlayerRemainingMoves_Implementation: %d"), qtd);
 }
@@ -263,8 +284,21 @@ void ABottleCapPlayerPawn::OnServerChangePlayerToPlay(int32 id)
 
 void ABottleCapPlayerPawn::OnServerChangeRemainingMoves(int32 qtd)
 {
+
+	if (IsLocallyControlled() && CanIMoveMe)
+	{
+		PlayerRemainingMoves->SetVisibility(true);
+		PlayerRemainingMoves->SetText(FText::AsNumber(qtd));
+	}
+	else
+	{
+		PlayerRemainingMoves->SetVisibility(false);
+		PlayerRemainingMoves->SetText(FText::AsNumber(0));
+	}
+
 	Server_UpdatePlayerRemainingMoves(qtd);
-	UE_LOG(LogTemp, Warning, TEXT("OnServerChangeRemainingMoves: %d"), RemainingMoves);
+	
+	UE_LOG(LogTemp, Warning, TEXT("OnServerChangeRemainingMoves: %d"), qtd);
 }
 
 void ABottleCapPlayerPawn::Tick(float DeltaTime)
@@ -284,7 +318,6 @@ void ABottleCapPlayerPawn::SetupPlayerInputComponent(UInputComponent *PlayerInpu
 void ABottleCapPlayerPawn::OnRep_MyName()
 {
 	PlayerName->SetText(MyName);
-	// UE_LOG(LogTemp, Warning, TEXT("OnRep_MyName: %s"), *MyName.ToString());
 }
 
 void ABottleCapPlayerPawn::OnRep_RemainingMoves()
@@ -320,7 +353,6 @@ void ABottleCapPlayerPawn::OnRep_RotChange()
 void ABottleCapPlayerPawn::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	UE_LOG(LogTemp, Warning, TEXT("GetLifetimeReplicatedProps"));
 	DOREPLIFETIME(ABottleCapPlayerPawn, PowerAccumulated);
 	DOREPLIFETIME(ABottleCapPlayerPawn, SphereVisual);
 	DOREPLIFETIME(ABottleCapPlayerPawn, MyName);
@@ -328,4 +360,5 @@ void ABottleCapPlayerPawn::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> 
 	DOREPLIFETIME(ABottleCapPlayerPawn, CanIMoveMe);
 	DOREPLIFETIME(ABottleCapPlayerPawn, CurrentRotation);
 	DOREPLIFETIME(ABottleCapPlayerPawn, RemainingMoves);
+	UE_LOG(LogTemp, Warning, TEXT("GetLifetimeReplicatedProps"));
 }

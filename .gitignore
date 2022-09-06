@@ -16,6 +16,7 @@ BottleCapRaceGameIncludes.pri
 BottleCapRaceGameSource.pri
 CMakeLists.txt
 Makefile
+PackageBuild
 
 # Compiled Object files
 *.slo

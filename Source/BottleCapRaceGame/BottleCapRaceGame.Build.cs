@@ -13,9 +13,9 @@ public class BottleCapRaceGame : ModuleRules
 															, "JsonUtilities"
 															, "UMG"
 															, "OnlineSubsystem"
-															, "OnlineSubsystemUtils"});
+															, "OnlineSubsystemUtils"
+															, "OnlineSubsystemSteam" });
 
-		DynamicallyLoadedModuleNames.Add("OnlineSubsystemNull");
 		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
 	}
 }

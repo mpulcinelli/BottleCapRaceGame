@@ -12,5 +12,12 @@
 				"Engine"
 			]
 		}
-	]
+	],
+"Plugins": [
+                {
+                        "Name": "OnlineSubsystemSteam",
+                        "Enabled": true
+                }
+        ]
+
 }

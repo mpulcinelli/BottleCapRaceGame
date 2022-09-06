@@ -5,19 +5,28 @@
 #include "BottleCapRaceGame/Pawns/BottleCapPlayerState.h"
 #include "BottleCapRaceGame/BottleCapGameState.h"
 #include "BottleCapRaceGame/Controller/BottleCapPlayerController.h"
+#include "BottleCapRaceGame/BottleCapGameInstance.h"
 
 ABottleCapRaceGameGameModeBase::ABottleCapRaceGameGameModeBase()
 {
     DefaultPawnClass = ABottleCapPlayerPawn::StaticClass();
     PlayerStateClass = ABottleCapPlayerState::StaticClass();
     GameStateClass = ABottleCapGameState::StaticClass();
-    //PlayerControllerClass = ABottleCapPlayerController::StaticClass();
+    // PlayerControllerClass = ABottleCapPlayerController::StaticClass();
 }
 
 void ABottleCapRaceGameGameModeBase::StartPlay()
 {
     Super::StartPlay();
     UE_LOG(LogTemp, Warning, TEXT("StartPlay"));
+    if (HasAuthority())
+    {
+        auto GI = GetGameInstance<UBottleCapGameInstance>();
+        if (GI)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("StartPlay -- StartOnlineGame"));
+        }
+    }
 }
 
 int32 ABottleCapRaceGameGameModeBase::GetPlayerIdToPlay() const
@@ -60,13 +69,24 @@ void ABottleCapRaceGameGameModeBase::MoveCap()
     }
 }
 
-void ABottleCapRaceGameGameModeBase::GameWelcomePlayer(UNetConnection *Connection, FString &RedirectURL){
+void ABottleCapRaceGameGameModeBase::PostLogin(APlayerController* NewPlayer)
+{
+    Super::PostLogin(NewPlayer);
+
+    OnChangePlayerToPlay.Broadcast(GetPlayerIdToPlay());
+    OnChangeRemainingMoves.Broadcast(GetPlayerRemainingMoves());
     
+    UE_LOG(LogTemp, Warning, TEXT("PostLogin"));
+}
+
+
+void ABottleCapRaceGameGameModeBase::GameWelcomePlayer(UNetConnection *Connection, FString &RedirectURL)
+{
+
     Super::GameWelcomePlayer(Connection, RedirectURL);
 
     UE_LOG(LogTemp, Warning, TEXT("GameWelcomePlayer"));
-    
-    OnChangePlayerToPlay.Broadcast(GetPlayerIdToPlay());
-    OnChangeRemainingMoves.Broadcast(GetPlayerRemainingMoves());
 
+    // OnChangePlayerToPlay.Broadcast(GetPlayerIdToPlay());
+    // OnChangeRemainingMoves.Broadcast(GetPlayerRemainingMoves());
 }
