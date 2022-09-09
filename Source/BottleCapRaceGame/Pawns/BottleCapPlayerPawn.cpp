@@ -31,22 +31,18 @@ ABottleCapPlayerPawn::ABottleCapPlayerPawn() : InternalId(1)
 
 	RootComponent = SphereVisual;
 	SphereVisual->SetCollisionProfileName(TEXT("Pawn"));
-	// SphereVisual->SetAngularDamping(1.1f);
-	// SphereVisual->SetLinearDamping(1.0f);
-	// SphereVisual->SetMassOverrideInKg(NAME_None, WeightKG, true);
 
 	// SphereVisual->BodyInstance.MassScale = 8.0f;
 	// SphereVisual->BodyInstance.MaxAngularVelocity = 5.0f;
 	// SphereVisual->SetNotifyRigidBodyCollision(true);
-
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereVisualAsset(TEXT("/Game/Meshes/Chapinha"));
 
 	if (SphereVisualAsset.Succeeded())
 	{
 		SphereVisual->SetStaticMesh(SphereVisualAsset.Object);
 		SphereVisual->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-		SphereVisual->SetWorldScale3D(FVector(0.8f));
-		SphereVisual->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
+		SphereVisual->SetWorldScale3D(FVector(0.5f));
+		SphereVisual->SetRelativeScale3D(FVector(0.6f, 0.6f, 0.6f));
 	}
 
 	AccumulatorVisual = CreateDefaultSubobject<UWidgetComponent>(TEXT("AccumulatorVisual"));
@@ -56,6 +52,7 @@ ABottleCapPlayerPawn::ABottleCapPlayerPawn() : InternalId(1)
 	AccumulatorVisual->SetRelativeScale3D(FVector(0.300000, 0.300000, 0.030000));
 	AccumulatorVisual->SetVisibility(false, true);
 	AccumulatorVisual->SetIsReplicated(true);
+	AccumulatorVisual->SetOnlyOwnerSee(true);
 
 	static ConstructorHelpers::FClassFinder<UUserWidget> AccumulatorProgressAsset(TEXT("/Game/BPs/WBP_AccumulatorProgress"));
 	if (AccumulatorProgressAsset.Succeeded())
@@ -81,9 +78,15 @@ ABottleCapPlayerPawn::ABottleCapPlayerPawn() : InternalId(1)
 	PlayerName->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
 	PlayerName->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
 
+	static ConstructorHelpers::FObjectFinder<UMaterial> MatPlayerName(TEXT("/Game/Materials/MAT_PlayerName"));
+	if (MatPlayerName.Succeeded())
+	{
+		PlayerName->SetMaterial(0, MatPlayerName.Object);
+	}
+
 	PlayerRemainingMoves = CreateDefaultSubobject<UTextRenderComponent>(TEXT("PlayerRemainingMoves"));
 	PlayerRemainingMoves->SetupAttachment(RootComponent);
-	PlayerRemainingMoves->SetRelativeLocation(FVector(0.0f, 0.0f, 186.0f));
+	PlayerRemainingMoves->SetRelativeLocation(FVector(0.0f, -80.0f, 186.0f));
 	PlayerRemainingMoves->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
 	PlayerRemainingMoves->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
 
@@ -121,6 +124,10 @@ ABottleCapPlayerPawn::ABottleCapPlayerPawn() : InternalId(1)
 void ABottleCapPlayerPawn::BeginPlay()
 {
 	Super::BeginPlay();
+
+	SphereVisual->SetAngularDamping(1.1f);
+	SphereVisual->SetLinearDamping(1.0f);
+	SphereVisual->SetMassOverrideInKg(NAME_None, WeightKG, true);
 
 	if (!IsLocallyControlled())
 	{
@@ -360,5 +367,5 @@ void ABottleCapPlayerPawn::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> 
 	DOREPLIFETIME(ABottleCapPlayerPawn, CanIMoveMe);
 	DOREPLIFETIME(ABottleCapPlayerPawn, CurrentRotation);
 	DOREPLIFETIME(ABottleCapPlayerPawn, RemainingMoves);
-	UE_LOG(LogTemp, Warning, TEXT("GetLifetimeReplicatedProps"));
+	UE_LOG(LogTemp, Warning, TEXT("ABottleCapPlayerPawn::GetLifetimeReplicatedProps"));
 }

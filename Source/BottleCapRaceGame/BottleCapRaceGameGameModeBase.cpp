@@ -6,6 +6,9 @@
 #include "BottleCapRaceGame/BottleCapGameState.h"
 #include "BottleCapRaceGame/Controller/BottleCapPlayerController.h"
 #include "BottleCapRaceGame/BottleCapGameInstance.h"
+#include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "GameFramework/PlayerStart.h"
 
 ABottleCapRaceGameGameModeBase::ABottleCapRaceGameGameModeBase()
 {
@@ -18,7 +21,8 @@ ABottleCapRaceGameGameModeBase::ABottleCapRaceGameGameModeBase()
 void ABottleCapRaceGameGameModeBase::StartPlay()
 {
     Super::StartPlay();
-    UE_LOG(LogTemp, Warning, TEXT("StartPlay"));
+    UE_LOG(LogTemp, Warning, TEXT("ABottleCapRaceGameGameModeBase::StartPlay"));
+
     if (HasAuthority())
     {
         auto GI = GetGameInstance<UBottleCapGameInstance>();
@@ -69,24 +73,70 @@ void ABottleCapRaceGameGameModeBase::MoveCap()
     }
 }
 
-void ABottleCapRaceGameGameModeBase::PostLogin(APlayerController* NewPlayer)
+void ABottleCapRaceGameGameModeBase::PostLogin(APlayerController *NewPlayer)
 {
     Super::PostLogin(NewPlayer);
 
     OnChangePlayerToPlay.Broadcast(GetPlayerIdToPlay());
     OnChangeRemainingMoves.Broadcast(GetPlayerRemainingMoves());
-    
-    UE_LOG(LogTemp, Warning, TEXT("PostLogin"));
+
+    UE_LOG(LogTemp, Warning, TEXT("ABottleCapRaceGameGameModeBase::PostLogin"));
 }
 
+void ABottleCapRaceGameGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController *NewPlayer)
+{
+    Super::HandleStartingNewPlayer_Implementation(NewPlayer);
+
+    ABottleCapPlayerPawn *MyPawn = NewPlayer->GetPawn<ABottleCapPlayerPawn>();
+
+    if (!MyPawn)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ABottleCapRaceGameGameModeBase::HandleStartingNewPlayer_Implementation NO PAWN!!!!!!!!!!!!!!!!"));
+        return;
+    }
+
+    TArray<AActor *> OutPawn;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), APawn::StaticClass(), OutPawn);
+
+    int32 QtdActors = OutPawn.Num();
+
+    UE_LOG(LogTemp, Warning, TEXT("ABottleCapRaceGameGameModeBase::HandleStartingNewPlayer_Implementation PAWNS %d"), QtdActors);
+
+    TArray<AActor *> OutPlayerStarts;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), OutPlayerStarts);
+    
+    FVector AcLocation;
+
+    switch (QtdActors)
+    {
+    case 0:
+        AcLocation = OutPlayerStarts[0]->GetActorLocation();
+        MyPawn->SetActorLocation(AcLocation);
+        break;
+    case 1:
+        AcLocation = OutPlayerStarts[1]->GetActorLocation();
+        MyPawn->SetActorLocation(AcLocation);
+        break;
+    case 2:
+        AcLocation = OutPlayerStarts[2]->GetActorLocation();
+        MyPawn->SetActorLocation(AcLocation);
+        break;
+    case 3:
+        AcLocation = OutPlayerStarts[3]->GetActorLocation();
+        MyPawn->SetActorLocation(AcLocation);
+        break;
+
+    default:
+        break;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("ABottleCapRaceGameGameModeBase::HandleStartingNewPlayer_Implementation"));
+}
 
 void ABottleCapRaceGameGameModeBase::GameWelcomePlayer(UNetConnection *Connection, FString &RedirectURL)
 {
 
     Super::GameWelcomePlayer(Connection, RedirectURL);
 
-    UE_LOG(LogTemp, Warning, TEXT("GameWelcomePlayer"));
-
-    // OnChangePlayerToPlay.Broadcast(GetPlayerIdToPlay());
-    // OnChangeRemainingMoves.Broadcast(GetPlayerRemainingMoves());
+    UE_LOG(LogTemp, Warning, TEXT("ABottleCapRaceGameGameModeBase::GameWelcomePlayer"));
 }

@@ -45,6 +45,7 @@ protected:
 	virtual void GameWelcomePlayer(UNetConnection *Connection, FString &RedirectURL) override;
 
 	virtual void PostLogin(APlayerController* NewPlayer) override;
-
+	
+	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 
 };

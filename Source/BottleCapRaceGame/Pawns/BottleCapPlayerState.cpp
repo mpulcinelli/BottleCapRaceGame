@@ -8,8 +8,6 @@ ABottleCapPlayerState::ABottleCapPlayerState()
     BottleCapPlayerName = "0";
 }
 
-
-
 void ABottleCapPlayerState::SetMyName(FString name)
 {
     if (HasAuthority())
