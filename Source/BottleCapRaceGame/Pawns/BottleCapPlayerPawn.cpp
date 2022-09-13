@@ -18,9 +18,10 @@
 #include "Components/DecalComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "BottleCapPlayerState.h"
-#include "BottleCapRaceGame/BottleCapRaceGameGameModeBase.h"
+#include "BottleCapRaceGame/GameMode/BottleCapRaceGameGameModeBase.h"
+#include "BottleCapRaceGame/Helpers/FormatMessage.h"
 
-ABottleCapPlayerPawn::ABottleCapPlayerPawn() : InternalId(1)
+ABottleCapPlayerPawn::ABottleCapPlayerPawn()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
@@ -31,10 +32,7 @@ ABottleCapPlayerPawn::ABottleCapPlayerPawn() : InternalId(1)
 
 	RootComponent = SphereVisual;
 	SphereVisual->SetCollisionProfileName(TEXT("Pawn"));
-
-	// SphereVisual->BodyInstance.MassScale = 8.0f;
-	// SphereVisual->BodyInstance.MaxAngularVelocity = 5.0f;
-	// SphereVisual->SetNotifyRigidBodyCollision(true);
+	SphereVisual->SetNotifyRigidBodyCollision(true);
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereVisualAsset(TEXT("/Game/Meshes/Chapinha"));
 
 	if (SphereVisualAsset.Succeeded())
@@ -106,7 +104,6 @@ ABottleCapPlayerPawn::ABottleCapPlayerPawn() : InternalId(1)
 	SpringArm->bEnableCameraLag = true;
 	SpringArm->CameraLagSpeed = 1.0f;
 	SpringArm->bUsePawnControlRotation = true;
-	// SpringArm->SetIsReplicated(true);
 
 	// Create a camera and attach to our spring arm
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("ActualCamera"));
@@ -125,6 +122,8 @@ void ABottleCapPlayerPawn::BeginPlay()
 {
 	Super::BeginPlay();
 
+	PRINT_LOG();
+
 	SphereVisual->SetAngularDamping(1.1f);
 	SphereVisual->SetLinearDamping(1.0f);
 	SphereVisual->SetMassOverrideInKg(NAME_None, WeightKG, true);
@@ -134,16 +133,16 @@ void ABottleCapPlayerPawn::BeginPlay()
 		PlayerRemainingMoves->SetVisibility(false);
 	}
 
+	auto PS = GetPlayerState();
+	if (PS)
+	{
+		InternalId = PS->GetPlayerId();
+	}
+
 	if (HasAuthority())
 	{
 		TArray<AActor *> OutActors;
 		UGameplayStatics::GetAllActorsOfClass(GetWorld(), APawn::StaticClass(), OutActors);
-
-		InternalId = OutActors.Num();
-
-		MyName = FText::AsNumber(InternalId);
-
-		Server_UpdateMyName(MyName);
 
 		ABottleCapRaceGameGameModeBase *GM = Cast<ABottleCapRaceGameGameModeBase>(GetWorld()->GetAuthGameMode());
 		if (GM)
@@ -152,7 +151,6 @@ void ABottleCapPlayerPawn::BeginPlay()
 			GM->OnChangeRemainingMoves.AddDynamic(this, &ABottleCapPlayerPawn::OnServerChangeRemainingMoves);
 			RemainingMoves = GM->GetPlayerRemainingMoves();
 			Server_UpdatePlayerRemainingMoves(RemainingMoves);
-
 		}
 	}
 
@@ -163,10 +161,20 @@ void ABottleCapPlayerPawn::BeginPlay()
 	UGameplayStatics::GetPlayerController(GetWorld(), 0)->bShowMouseCursor = true;
 }
 
+void ABottleCapPlayerPawn::UpdateMyName(int32 _MyName)
+{
+	PRINT_LOG();
+
+	if (HasAuthority())
+	{
+		PRINT_LOG_2("MyName", FString::FromInt(_MyName));
+		Server_UpdateMyName(FText::AsNumber(_MyName));
+	}
+}
+
 void ABottleCapPlayerPawn::Server_UpdatePlayerRemainingMoves_Implementation(int32 qtd)
 {
 	RemainingMoves = qtd;
-
 
 	if (IsLocallyControlled() && CanIMoveMe)
 	{
@@ -179,12 +187,12 @@ void ABottleCapPlayerPawn::Server_UpdatePlayerRemainingMoves_Implementation(int3
 		PlayerRemainingMoves->SetText(FText::AsNumber(0));
 	}
 
-	// PlayerRemainingMoves->SetText(FText::AsNumber(qtd));
-	UE_LOG(LogTemp, Warning, TEXT("Server_UpdatePlayerRemainingMoves_Implementation: %d"), qtd);
+	PRINT_LOG_2("int32 qtd", FString::FromInt(qtd));
 }
 
 void ABottleCapPlayerPawn::Server_ProvokeImpulse_Implementation(FVector Impulse)
 {
+	PRINT_LOG();
 
 	ABottleCapRaceGameGameModeBase *GM = Cast<ABottleCapRaceGameGameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
 	if (GM)
@@ -254,10 +262,13 @@ void ABottleCapPlayerPawn::IncrementAccumulation()
 	}
 }
 
-void ABottleCapPlayerPawn::Server_UpdateMyName_Implementation(const FText &_MyName)
+void ABottleCapPlayerPawn::Server_UpdateMyName_Implementation(const FText &MyName)
 {
+	PRINT_LOG_2("MyName", *MyName.ToString());
+	
+	InternalId = FCString::Atoi(*MyName.ToString());
+	const FText _MyName = FText::AsNumber(InternalId);
 	PlayerName->SetText(_MyName);
-	UE_LOG(LogTemp, Warning, TEXT("Server_UpdateMyName_Implementation: %s"), *_MyName.ToString());
 }
 
 void ABottleCapPlayerPawn::LookUp(float AxisValue)
@@ -275,7 +286,6 @@ void ABottleCapPlayerPawn::LookUp(float AxisValue)
 
 void ABottleCapPlayerPawn::Server_LookUp_Implementation(FRotator AxisValue)
 {
-	// AddControllerPitchInput((AxisValue * -1) * TurnRateGamepad * GetWorld()->GetDeltaSeconds());
 	SetActorRotation(AxisValue);
 }
 
@@ -304,8 +314,8 @@ void ABottleCapPlayerPawn::OnServerChangeRemainingMoves(int32 qtd)
 	}
 
 	Server_UpdatePlayerRemainingMoves(qtd);
-	
-	UE_LOG(LogTemp, Warning, TEXT("OnServerChangeRemainingMoves: %d"), qtd);
+
+	PRINT_LOG_1(FString::FromInt(qtd));
 }
 
 void ABottleCapPlayerPawn::Tick(float DeltaTime)
@@ -322,11 +332,6 @@ void ABottleCapPlayerPawn::SetupPlayerInputComponent(UInputComponent *PlayerInpu
 	PlayerInputComponent->BindAxis("LookUp", this, &ABottleCapPlayerPawn::LookUp);
 }
 
-void ABottleCapPlayerPawn::OnRep_MyName()
-{
-	PlayerName->SetText(MyName);
-}
-
 void ABottleCapPlayerPawn::OnRep_RemainingMoves()
 {
 	if (IsLocallyControlled() && CanIMoveMe)
@@ -340,17 +345,22 @@ void ABottleCapPlayerPawn::OnRep_RemainingMoves()
 		PlayerRemainingMoves->SetText(FText::AsNumber(0));
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("OnRep_RemainingMoves: %d"), RemainingMoves);
+	PRINT_LOG_1(FString::FromInt(RemainingMoves));
 }
 
-void ABottleCapPlayerPawn::OnRep_InternalId()
+void ABottleCapPlayerPawn::OnRep_ChangeInternalId()
 {
-	// UE_LOG(LogTemp, Warning, TEXT("OnRep_InternalId: %d"), InternalId);
+	//if (!IsLocallyControlled())
+	//{
+		const FText _MyName = FText::AsNumber(InternalId);
+		PlayerName->SetText(_MyName);
+
+		PRINT_LOG_1(FString::FromInt(InternalId));
+	//}
 }
 
 void ABottleCapPlayerPawn::OnRep_RotChange()
 {
-	UE_LOG(LogTemp, Warning, TEXT("OnRep_RotChange: %s"), *CurrentRotation.ToString());
 	if (!IsLocallyControlled())
 	{
 		SetActorRotation(CurrentRotation);
@@ -360,12 +370,13 @@ void ABottleCapPlayerPawn::OnRep_RotChange()
 void ABottleCapPlayerPawn::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
 	DOREPLIFETIME(ABottleCapPlayerPawn, PowerAccumulated);
 	DOREPLIFETIME(ABottleCapPlayerPawn, SphereVisual);
-	DOREPLIFETIME(ABottleCapPlayerPawn, MyName);
-	DOREPLIFETIME(ABottleCapPlayerPawn, InternalId);
 	DOREPLIFETIME(ABottleCapPlayerPawn, CanIMoveMe);
 	DOREPLIFETIME(ABottleCapPlayerPawn, CurrentRotation);
 	DOREPLIFETIME(ABottleCapPlayerPawn, RemainingMoves);
-	UE_LOG(LogTemp, Warning, TEXT("ABottleCapPlayerPawn::GetLifetimeReplicatedProps"));
+	DOREPLIFETIME(ABottleCapPlayerPawn, InternalId);
+
+	PRINT_LOG();
 }

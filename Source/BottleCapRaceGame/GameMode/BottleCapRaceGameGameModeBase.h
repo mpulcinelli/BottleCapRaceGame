@@ -42,7 +42,6 @@ public:
 
 protected:
 	virtual void StartPlay() override;
-	virtual void GameWelcomePlayer(UNetConnection *Connection, FString &RedirectURL) override;
 
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	

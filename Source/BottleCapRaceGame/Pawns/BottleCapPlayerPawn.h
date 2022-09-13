@@ -24,11 +24,6 @@ public:
 	UPROPERTY(EditAnywhere)
 	class UTextRenderComponent *PlayerRemainingMoves;
 
-
-	UPROPERTY(Transient, ReplicatedUsing = OnRep_MyName)
-	FText MyName;
-
-
 	UPROPERTY(EditAnywhere)
 	class UWidgetComponent *AccumulatorVisual;
 
@@ -42,22 +37,19 @@ public:
 	float WeightKG = 150.0f;
 
 	UPROPERTY(Replicated)
-	bool CanIMoveMe=false;
+	bool CanIMoveMe = false;
 
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_RemainingMoves)
-	int32 RemainingMoves=0;
-
+	int32 RemainingMoves = 0;
 
 	UFUNCTION(Server, Reliable)
 	void Server_ProvokeImpulse(FVector Impulse);
 	void Server_ProvokeImpulse_Implementation(FVector Impulse);
 
-
 	UFUNCTION(Server, Reliable)
 	void Server_Turn(FRotator AxisValue);
 	void Server_Turn_Implementation(FRotator AxisValue);
 	void Turn(float AxisValue);
-
 
 	UFUNCTION(Server, Reliable)
 	void Server_LookUp(FRotator AxisValue);
@@ -68,9 +60,6 @@ public:
 	void Server_UpdatePlayerRemainingMoves(int32 qtd);
 	void Server_UpdatePlayerRemainingMoves_Implementation(int32 qtd);
 
-
-
-
 	UFUNCTION()
 	void AccumulateStart();
 
@@ -80,21 +69,18 @@ public:
 	void IncrementAccumulation();
 
 	UFUNCTION(NetMulticast, Reliable)
-	void Server_UpdateMyName(const FText & _MyName);
-	void Server_UpdateMyName_Implementation(const FText & _MyName);
+	void Server_UpdateMyName(const FText &_MyName);
+
+	void UpdateMyName(int32 _MyName);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const override;
 
-
-
 private:
-
 	UFUNCTION()
 	void OnServerChangePlayerToPlay(int32 id);
 
 	UFUNCTION()
 	void OnServerChangeRemainingMoves(int32 qtd);
-
 
 	UPROPERTY(Replicated)
 	float PowerAccumulated = 0.0f;
@@ -104,30 +90,24 @@ private:
 	class UAccumulatorProgressWidget *AccumulatorProgressWidget;
 
 	UPROPERTY(EditAnywhere)
-	class UDecalComponent* PointDirectionDecal;
+	class UDecalComponent *PointDirectionDecal;
 
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_RotChange)
 	FRotator CurrentRotation;
 
 	FTimerHandle AccumulatePowerHandle;
-	
-	UPROPERTY(Transient, ReplicatedUsing = OnRep_InternalId)
+
+	UPROPERTY(Transient, ReplicatedUsing = OnRep_ChangeInternalId)
 	int32 InternalId;
-
-
-
 
 	UFUNCTION()
 	void OnRep_RotChange();
 
 	UFUNCTION()
-	void OnRep_MyName();
-
-	UFUNCTION()
-	void OnRep_InternalId();
-
-	UFUNCTION()
 	void OnRep_RemainingMoves();
+
+	UFUNCTION()
+	void OnRep_ChangeInternalId();
 
 protected:
 	// Called when the game starts or when spawned

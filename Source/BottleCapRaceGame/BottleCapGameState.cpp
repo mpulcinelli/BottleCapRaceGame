@@ -2,7 +2,7 @@
 
 #include "BottleCapGameState.h"
 
-ABottleCapGameState::ABottleCapGameState() : PlayerTurn(1), NumOfFlicks(3)
+ABottleCapGameState::ABottleCapGameState() : NumOfFlicks(3)
 {
     
 }
