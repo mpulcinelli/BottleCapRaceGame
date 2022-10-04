@@ -20,19 +20,34 @@
 #include "BottleCapPlayerState.h"
 #include "BottleCapRaceGame/GameMode/BottleCapRaceGameGameModeBase.h"
 #include "BottleCapRaceGame/Helpers/FormatMessage.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+#include "Engine/TriggerBox.h"
+#include "BottleCapRaceGame/BottleCapGameInstance.h"
 
-ABottleCapPlayerPawn::ABottleCapPlayerPawn()
+// Engine/Source/Runtime/Engine/Classes/GameFramework/KillZVolume.h
+
+ABottleCapPlayerPawn::ABottleCapPlayerPawn(const FObjectInitializer &ObjectInitializer)
+	: Super(ObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = true;
+
 	bReplicates = true;
 
 	TurnRateGamepad = 10.f;
 
 	SphereVisual = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("VisualRepresentation"));
-
 	RootComponent = SphereVisual;
 	SphereVisual->SetCollisionProfileName(TEXT("Pawn"));
-	SphereVisual->SetNotifyRigidBodyCollision(true);
+	SphereVisual->AlwaysLoadOnClient = true;
+	SphereVisual->AlwaysLoadOnServer = true;
+	SphereVisual->bOwnerNoSee = false;
+	SphereVisual->bCastDynamicShadow = true;
+	SphereVisual->PrimaryComponentTick.TickGroup = TG_PrePhysics;
+	// SphereVisual->SetNotifyRigidBodyCollision(true);
+	SphereVisual->SetGenerateOverlapEvents(true);
+	// SphereVisual->SetCanEverAffectNavigation(false);
+
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereVisualAsset(TEXT("/Game/Meshes/Chapinha"));
 
 	if (SphereVisualAsset.Succeeded())
@@ -49,7 +64,6 @@ ABottleCapPlayerPawn::ABottleCapPlayerPawn()
 	AccumulatorVisual->SetRelativeRotation(FRotator(0.000000, 180.000000, 0.000000));
 	AccumulatorVisual->SetRelativeScale3D(FVector(0.300000, 0.300000, 0.030000));
 	AccumulatorVisual->SetVisibility(false, true);
-	AccumulatorVisual->SetIsReplicated(true);
 	AccumulatorVisual->SetOnlyOwnerSee(true);
 
 	static ConstructorHelpers::FClassFinder<UUserWidget> AccumulatorProgressAsset(TEXT("/Game/BPs/WBP_AccumulatorProgress"));
@@ -94,21 +108,33 @@ ABottleCapPlayerPawn::ABottleCapPlayerPawn()
 		PlayerRemainingMoves->SetMaterial(0, MatRemainingMoves.Object);
 	}
 
-	USpringArmComponent *SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraAttachmentArm"));
+	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraAttachmentArm"));
 	SpringArm->SetupAttachment(RootComponent);
-
 	SpringArm->SetRelativeLocation(FVector(0.0f, 0.0f, 150.0f));
-	SpringArm->SetRelativeRotation(FRotator(-60.0f, 0.0f, 0.0f));
-
+	SpringArm->SetRelativeRotation(FRotator(-20.0f, 0.0f, 0.0f));
 	SpringArm->TargetArmLength = 400.0f;
 	SpringArm->bEnableCameraLag = true;
-	SpringArm->CameraLagSpeed = 1.0f;
+	SpringArm->CameraLagSpeed = 3.0f;
 	SpringArm->bUsePawnControlRotation = true;
+	SpringArm->bInheritPitch = false;
+	SpringArm->bInheritRoll = true;
+	SpringArm->bInheritYaw = true;
 
 	// Create a camera and attach to our spring arm
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("ActualCamera"));
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 	Camera->bUsePawnControlRotation = false;
+
+	MyTurnIndicatorEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("MyTurnIndicatorEffect"));
+	MyTurnIndicatorEffect->SetupAttachment(RootComponent);
+
+	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> CircleTurnNiagara(TEXT("/Game/ParticleEffects/FX_CircleTurn"));
+	if (CircleTurnNiagara.Succeeded())
+	{
+		MyTurnIndicatorEffect->SetAsset(CircleTurnNiagara.Object);
+	}
+
+	MyTurnIndicatorEffect->SetAutoActivate(false);
 
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = true;
@@ -122,7 +148,12 @@ void ABottleCapPlayerPawn::BeginPlay()
 {
 	Super::BeginPlay();
 
-	PRINT_LOG();
+#if UE_BUILD_DEVELOPMENT
+	if (HasAuthority())
+	{
+		PRINT_LOG_1(GetWorld()->GetAuthGameMode()->GetFullName());
+	}
+#endif
 
 	SphereVisual->SetAngularDamping(1.1f);
 	SphereVisual->SetLinearDamping(1.0f);
@@ -158,12 +189,45 @@ void ABottleCapPlayerPawn::BeginPlay()
 
 	AccumulatorProgressWidget = GetAccumulatorProgressWidget();
 
-	UGameplayStatics::GetPlayerController(GetWorld(), 0)->bShowMouseCursor = true;
+	InitialLocation = GetActorLocation();
+
+	SphereVisual->OnComponentBeginOverlap.AddDynamic(this, &ABottleCapPlayerPawn::OnOverlapOtherComponent);
+	SphereVisual->OnComponentHit.AddDynamic(this, &ABottleCapPlayerPawn::OnHitOtherComponent);
+}
+
+void ABottleCapPlayerPawn::OnOverlapOtherComponent(UPrimitiveComponent *OverlappedComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult)
+{
+	if (OtherActor->GetClass() == ATriggerBox::StaticClass())
+	{
+#if UE_BUILD_DEVELOPMENT
+		PRINT_LOG_1(OtherActor->GetFullName());
+#endif
+		if (IsLocallyControlled())
+		{
+#if UE_BUILD_DEVELOPMENT
+			PRINT_LOG_2("IsLocallyControlled()", InitialLocation.ToString());
+#endif
+
+			Server_ResetLocation(InitialLocation);
+		}
+	}
+}
+
+void ABottleCapPlayerPawn::OnHitOtherComponent(UPrimitiveComponent *HitComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp, FVector NormalImpulse, const FHitResult &Hit)
+{
+	if (OtherActor->GetClass() == ATriggerBox::StaticClass())
+	{
+#if UE_BUILD_DEVELOPMENT
+		PRINT_LOG_1(OtherActor->GetFullName());
+#endif
+	}
 }
 
 void ABottleCapPlayerPawn::UpdateMyName(int32 _MyName)
 {
+#if UE_BUILD_DEVELOPMENT
 	PRINT_LOG();
+#endif
 
 	if (HasAuthority())
 	{
@@ -180,20 +244,39 @@ void ABottleCapPlayerPawn::Server_UpdatePlayerRemainingMoves_Implementation(int3
 	{
 		PlayerRemainingMoves->SetVisibility(true);
 		PlayerRemainingMoves->SetText(FText::AsNumber(qtd));
+		MyTurnIndicatorEffect->Activate();
 	}
 	else
 	{
 		PlayerRemainingMoves->SetVisibility(false);
 		PlayerRemainingMoves->SetText(FText::AsNumber(0));
+		MyTurnIndicatorEffect->Deactivate();
 	}
 
-	PRINT_LOG_2("int32 qtd", FString::FromInt(qtd));
+#if UE_BUILD_DEVELOPMENT
+	PRINT_LOG_2("RemainingMoves", FString::FromInt(qtd));
+#endif
+}
+
+void ABottleCapPlayerPawn::Server_ResetLocation_Implementation(FVector Location)
+{
+
+#if UE_BUILD_DEVELOPMENT
+	PRINT_LOG_2("LOCATION:", Location.ToString());
+#endif
+
+	ABottleCapRaceGameGameModeBase *GM = Cast<ABottleCapRaceGameGameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (GM)
+	{
+		GM->GoNextPlayer();
+	}
+
+	SetActorLocation(Location);
+	SetActorRotation(FRotator(0.0f));
 }
 
 void ABottleCapPlayerPawn::Server_ProvokeImpulse_Implementation(FVector Impulse)
 {
-	PRINT_LOG();
-
 	ABottleCapRaceGameGameModeBase *GM = Cast<ABottleCapRaceGameGameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
 	if (GM)
 	{
@@ -203,24 +286,51 @@ void ABottleCapPlayerPawn::Server_ProvokeImpulse_Implementation(FVector Impulse)
 	SphereVisual->AddImpulse(Impulse);
 }
 
+/**
+ * @brief Método para olhar para cima e para baixo
+ *
+ * @param AxisValue
+ */
+void ABottleCapPlayerPawn::LookUp(float AxisValue)
+{
+	if (!Controller || AxisValue == 0.0f)
+		return;
+
+	SpringArm->AddLocalRotation(FRotator(AxisValue, 0.000000, 0.000000));
+}
+
+/**
+ * @brief Método para olhar para os lados.
+ *
+ * @param AxisValue
+ */
 void ABottleCapPlayerPawn::Turn(float AxisValue)
 {
 	if (!Controller || AxisValue == 0.0f)
 		return;
 
-	if (IsLocallyControlled())
+	AddControllerYawInput(AxisValue * TurnRateGamepad * GetWorld()->GetDeltaSeconds());
+	CurrentActorRotation = GetActorRotation();
+
+	Server_Turn(CurrentActorRotation);
+}
+
+/**
+ * @brief Método para fazer o servidor olhar para os lados.
+ *
+ * @param AxisValue
+ */
+void ABottleCapPlayerPawn::Server_Turn_Implementation(FRotator AxisValue)
+{
+	if (!IsLocallyControlled())
 	{
-		AddControllerYawInput(AxisValue * TurnRateGamepad * GetWorld()->GetDeltaSeconds());
-		CurrentRotation = GetActorRotation();
-		Server_Turn(CurrentRotation);
+		SetActorRotation(AxisValue);
 	}
 }
 
-void ABottleCapPlayerPawn::Server_Turn_Implementation(FRotator AxisValue)
-{
-	SetActorRotation(AxisValue);
-}
-
+/**
+ * @brief Método para iniciar o acumulo de força para fazer a movimentação do player.
+ */
 void ABottleCapPlayerPawn::AccumulateStart()
 {
 	if (IsLocallyControlled() && CanIMoveMe)
@@ -231,6 +341,9 @@ void ABottleCapPlayerPawn::AccumulateStart()
 	}
 }
 
+/**
+ * @brief Método para finalizar e disparar o acumulo de força para fazer a movimentação do player.
+ */
 void ABottleCapPlayerPawn::AccumulateStop()
 {
 
@@ -253,6 +366,10 @@ void ABottleCapPlayerPawn::AccumulateStop()
 	}
 }
 
+/**
+ * @brief Método para incrementar o acumulo de força para a movimentação do player.
+ *
+ */
 void ABottleCapPlayerPawn::IncrementAccumulation()
 {
 	if (PowerAccumulated <= 12.0f)
@@ -264,29 +381,14 @@ void ABottleCapPlayerPawn::IncrementAccumulation()
 
 void ABottleCapPlayerPawn::Server_UpdateMyName_Implementation(const FText &MyName)
 {
+
+#if UE_BUILD_DEVELOPMENT
 	PRINT_LOG_2("MyName", *MyName.ToString());
-	
+#endif
+
 	InternalId = FCString::Atoi(*MyName.ToString());
 	const FText _MyName = FText::AsNumber(InternalId);
 	PlayerName->SetText(_MyName);
-}
-
-void ABottleCapPlayerPawn::LookUp(float AxisValue)
-{
-	if (!Controller || AxisValue == 0.0f)
-		return;
-
-	if (IsLocallyControlled())
-	{
-		AddControllerPitchInput((AxisValue * -1) * TurnRateGamepad * GetWorld()->GetDeltaSeconds());
-		CurrentRotation = GetActorRotation();
-		Server_LookUp(CurrentRotation);
-	}
-}
-
-void ABottleCapPlayerPawn::Server_LookUp_Implementation(FRotator AxisValue)
-{
-	SetActorRotation(AxisValue);
 }
 
 class UAccumulatorProgressWidget *ABottleCapPlayerPawn::GetAccumulatorProgressWidget() const
@@ -306,16 +408,20 @@ void ABottleCapPlayerPawn::OnServerChangeRemainingMoves(int32 qtd)
 	{
 		PlayerRemainingMoves->SetVisibility(true);
 		PlayerRemainingMoves->SetText(FText::AsNumber(qtd));
+		MyTurnIndicatorEffect->Activate();
 	}
 	else
 	{
 		PlayerRemainingMoves->SetVisibility(false);
 		PlayerRemainingMoves->SetText(FText::AsNumber(0));
+		MyTurnIndicatorEffect->Deactivate();
 	}
 
 	Server_UpdatePlayerRemainingMoves(qtd);
 
+#if UE_BUILD_DEVELOPMENT
 	PRINT_LOG_1(FString::FromInt(qtd));
+#endif
 }
 
 void ABottleCapPlayerPawn::Tick(float DeltaTime)
@@ -338,33 +444,40 @@ void ABottleCapPlayerPawn::OnRep_RemainingMoves()
 	{
 		PlayerRemainingMoves->SetVisibility(true);
 		PlayerRemainingMoves->SetText(FText::AsNumber(RemainingMoves));
+		MyTurnIndicatorEffect->Activate();
 	}
 	else
 	{
 		PlayerRemainingMoves->SetVisibility(false);
 		PlayerRemainingMoves->SetText(FText::AsNumber(0));
+		MyTurnIndicatorEffect->Deactivate();
 	}
 
+#if UE_BUILD_DEVELOPMENT
 	PRINT_LOG_1(FString::FromInt(RemainingMoves));
+#endif
 }
 
 void ABottleCapPlayerPawn::OnRep_ChangeInternalId()
 {
-	//if (!IsLocallyControlled())
-	//{
-		const FText _MyName = FText::AsNumber(InternalId);
-		PlayerName->SetText(_MyName);
+	const FText _MyName = FText::AsNumber(InternalId);
+	PlayerName->SetText(_MyName);
 
-		PRINT_LOG_1(FString::FromInt(InternalId));
-	//}
+#if UE_BUILD_DEVELOPMENT
+	PRINT_LOG_1(FString::FromInt(InternalId));
+#endif
 }
 
-void ABottleCapPlayerPawn::OnRep_RotChange()
+void ABottleCapPlayerPawn::OnRep_ActorRotChange()
 {
 	if (!IsLocallyControlled())
 	{
-		SetActorRotation(CurrentRotation);
+		SetActorRotation(CurrentActorRotation);
 	}
+
+#if UE_BUILD_DEVELOPMENT
+	PRINT_LOG_1(CurrentActorRotation.ToString());
+#endif
 }
 
 void ABottleCapPlayerPawn::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const
@@ -373,10 +486,29 @@ void ABottleCapPlayerPawn::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> 
 
 	DOREPLIFETIME(ABottleCapPlayerPawn, PowerAccumulated);
 	DOREPLIFETIME(ABottleCapPlayerPawn, SphereVisual);
+	DOREPLIFETIME(ABottleCapPlayerPawn, Camera);
 	DOREPLIFETIME(ABottleCapPlayerPawn, CanIMoveMe);
-	DOREPLIFETIME(ABottleCapPlayerPawn, CurrentRotation);
+	DOREPLIFETIME(ABottleCapPlayerPawn, CurrentActorRotation);
 	DOREPLIFETIME(ABottleCapPlayerPawn, RemainingMoves);
 	DOREPLIFETIME(ABottleCapPlayerPawn, InternalId);
 
+#if UE_BUILD_DEVELOPMENT
 	PRINT_LOG();
+#endif
+}
+
+void ABottleCapPlayerPawn::Destroyed()
+{
+	Super::Destroyed();
+
+	if (HasAuthority())
+	{
+		if (auto GM = GetWorld()->GetAuthGameMode())
+		{
+			if (auto PC = GetWorld()->GetFirstPlayerController())
+			{
+				GM->RestartPlayer(PC);
+			}
+		}
+	}
 }

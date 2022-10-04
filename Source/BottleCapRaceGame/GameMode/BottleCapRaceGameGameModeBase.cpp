@@ -5,7 +5,6 @@
 #include "BottleCapRaceGame/Pawns/BottleCapPlayerPawn.h"
 #include "BottleCapRaceGame/Pawns/BottleCapPlayerState.h"
 #include "BottleCapRaceGame/BottleCapGameState.h"
-#include "BottleCapRaceGame/Controller/BottleCapPlayerController.h"
 #include "BottleCapRaceGame/BottleCapGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -22,25 +21,21 @@ ABottleCapRaceGameGameModeBase::ABottleCapRaceGameGameModeBase()
 void ABottleCapRaceGameGameModeBase::StartPlay()
 {
     Super::StartPlay();
+
+    PRINT_LOG();
+}
+
+void ABottleCapRaceGameGameModeBase::PostSeamlessTravel()
+{
+    Super::PostSeamlessTravel();
     PRINT_LOG();
 
-    TArray<int32> players;
-
-    for (auto &&i :  GameState->PlayerArray)
-    {
-        players.Add(i->GetPlayerId());
-    }
-
-    players.Sort();
-
-    //GetGameState<ABottleCapGameState>()->PlayerTurn = GameState->PlayerArray[0]->GetPlayerId();
-    GetGameState<ABottleCapGameState>()->PlayerTurn = players[0];
-    PRINT_LOG_2("PlayerArray[0]::PlayerId", FString::FromInt(GameState->PlayerArray[0]->GetPlayerId()));
+    GetGameState<ABottleCapGameState>()->CurrentPlayer = GameState->PlayerArray[IndexPlayer];
 }
 
 int32 ABottleCapRaceGameGameModeBase::GetPlayerIdToPlay() const
 {
-    return GetGameState<ABottleCapGameState>()->PlayerTurn;
+    return GameState->PlayerArray[IndexPlayer]->GetPlayerId();
 }
 
 int32 ABottleCapRaceGameGameModeBase::GetPlayerRemainingMoves() const
@@ -59,87 +54,122 @@ void ABottleCapRaceGameGameModeBase::MoveCap()
     }
     else
     {
-        int32 NextPlayer = GetGameState<ABottleCapGameState>()->PlayerTurn;
+        // int32 NextPlayer = GetGameState<ABottleCapGameState>()->PlayerTurn;
         GetGameState<ABottleCapGameState>()->NumOfFlicks = 3;
+        int NumTotalPlayers = GameState->PlayerArray.Num();
+        IndexPlayer++;
 
-        int NumTotalPlayers = GameState->PlayerArray[0]->GetPlayerId()+GetNumPlayers()-1;
+        if (IndexPlayer >= NumTotalPlayers)
+        {
+            IndexPlayer = 0;
+        }
 
-        if (NextPlayer >= NumTotalPlayers)
-        {
-            GetGameState<ABottleCapGameState>()->PlayerTurn = GameState->PlayerArray[0]->GetPlayerId();
-        }
-        else
-        {
-            GetGameState<ABottleCapGameState>()->PlayerTurn = NextPlayer + 1;
-        }
+        GetGameState<ABottleCapGameState>()->CurrentPlayer = GameState->PlayerArray[IndexPlayer];
 
         OnChangePlayerToPlay.Broadcast(GetPlayerIdToPlay());
         OnChangeRemainingMoves.Broadcast(GetPlayerRemainingMoves());
     }
 }
 
-void ABottleCapRaceGameGameModeBase::PostLogin(APlayerController *NewPlayer)
+void ABottleCapRaceGameGameModeBase::GoNextPlayer()
 {
-    Super::PostLogin(NewPlayer);
+    int NumTotalPlayers = GameState->PlayerArray.Num();
+    IndexPlayer++;
+
+    if (IndexPlayer >= NumTotalPlayers)
+    {
+        IndexPlayer = 0;
+    }
+
+    GetGameState<ABottleCapGameState>()->NumOfFlicks = 3;
+
+    OnChangePlayerToPlay.Broadcast(GetPlayerIdToPlay());
+    OnChangeRemainingMoves.Broadcast(GetPlayerRemainingMoves());
+}
+
+AActor *ABottleCapRaceGameGameModeBase::ChoosePlayerStart_Implementation(AController *Player)
+{
+    AActor *PlayStartFromSup = Super::ChoosePlayerStart_Implementation(Player);
+
+#if UE_BUILD_DEVELOPMENT
     PRINT_LOG();
+#endif
+
+    TArray<AActor *> OutPlayerStarts;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), OutPlayerStarts);
+
+#if UE_BUILD_DEVELOPMENT
+    PRINT_LOG_1(FString::FromInt(CountPlayers));
+#endif
+
+    switch (CountPlayers)
+    {
+    case 0:
+    {
+        CountPlayers++;
+        return OutPlayerStarts[0];
+    }
+    break;
+    case 1:
+    {
+        CountPlayers++;
+        return OutPlayerStarts[1];
+    }
+    break;
+    case 2:
+    {
+        CountPlayers++;
+        return OutPlayerStarts[2];
+    }
+    break;
+    case 3:
+    {
+        CountPlayers++;
+        return OutPlayerStarts[3];
+    }
+    break;
+
+    default:
+        return PlayStartFromSup;
+        break;
+    }
 }
 
 void ABottleCapRaceGameGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController *NewPlayer)
 {
     Super::HandleStartingNewPlayer_Implementation(NewPlayer);
 
+#if UE_BUILD_DEVELOPMENT
     PRINT_LOG();
-  
-    if (HasAuthority())
+#endif
+
+    ABottleCapPlayerPawn *MyPawn = NewPlayer->GetPawn<ABottleCapPlayerPawn>();
+    if (!MyPawn)
     {
-        ABottleCapPlayerPawn *MyPawn = NewPlayer->GetPawn<ABottleCapPlayerPawn>();
-        if (!MyPawn)
-        {
-            PRINT_LOG_1("NO PAWN { ABottleCapPlayerPawn }");
-            return;
-        }
+#if UE_BUILD_DEVELOPMENT
+        PRINT_LOG_1("NO PAWN { ABottleCapPlayerPawn }");
+#endif
 
-        TArray<AActor *> OutPlayerStarts;
-        UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), OutPlayerStarts);
-
-        int32 NumberOfPlayers = GameState->PlayerArray.Num();
-
-        int32 PlayerId = MyPawn->GetPlayerState<ABottleCapPlayerState>()->GetPlayerId();
-
-        PRINT_LOG_2("My Pawn::PlayerId", FString::FromInt(PlayerId));
-
-        MyPawn->UpdateMyName(PlayerId);
-
-        switch (NumberOfPlayers - 1)
-        {
-        case 0:
-        {
-            RestartPlayerAtPlayerStart(MyPawn->GetController(), OutPlayerStarts[0]);
-        }
-        break;
-        case 1:
-        {
-            RestartPlayerAtPlayerStart(MyPawn->GetController(), OutPlayerStarts[1]);
-        }
-        break;
-        case 2:
-        {
-            RestartPlayerAtPlayerStart(MyPawn->GetController(), OutPlayerStarts[2]);
-        }
-        break;
-        case 3:
-        {
-            RestartPlayerAtPlayerStart(MyPawn->GetController(), OutPlayerStarts[3]);
-        }
-        break;
-
-        default:
-            break;
-        }
-
-        OnChangePlayerToPlay.Broadcast(GetPlayerIdToPlay());
-        OnChangeRemainingMoves.Broadcast(GetPlayerRemainingMoves());
-
-        PRINT_LOG_2("NumberOfPlayers", FString::FromInt(NumberOfPlayers));
+        return;
     }
+
+    TArray<AActor *> OutPlayerStarts;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), OutPlayerStarts);
+
+    int32 NumberOfPlayers = GameState->PlayerArray.Num();
+
+    int32 PlayerId = MyPawn->GetPlayerState<ABottleCapPlayerState>()->GetPlayerId();
+
+#if UE_BUILD_DEVELOPMENT
+    PRINT_LOG_2("My Pawn::PlayerId", FString::FromInt(PlayerId));
+#endif
+
+    MyPawn->UpdateMyName(PlayerId);
+
+    OnChangePlayerToPlay.Broadcast(GetPlayerIdToPlay());
+    OnChangeRemainingMoves.Broadcast(GetPlayerRemainingMoves());
+
+#if UE_BUILD_DEVELOPMENT
+    PRINT_LOG_2("NumberOfPlayers", FString::FromInt(NumberOfPlayers));
+#endif
 }

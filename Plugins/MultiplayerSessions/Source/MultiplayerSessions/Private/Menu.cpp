@@ -3,31 +3,17 @@
 #include "Menu.h"
 #include "MultiplayerSessionsSubsystem.h"
 #include "Components/Button.h"
+#include "Components/EditableTextBox.h"
 #include "OnlineSessionSettings.h"
 #include "OnlineSubsystem.h"
 
-void UMenu::MenuSetup(int32 NumberOfPublicConnections, FString TypeOfMatch, FString LobbyPath)
+void UMenu::SetupMultiplayerGame(int32 NumberOfPublicConnections, FString TypeOfMatch, FString LobbyPath)
 {
-    AddToViewport();
     SetVisibility(ESlateVisibility::Visible);
     bIsFocusable = true;
     NumPublicConnections = NumberOfPublicConnections;
     MatchType = TypeOfMatch;
     PathToLobby = FString::Printf(TEXT("%s?listen"), *LobbyPath);
-
-    UWorld *World = GetWorld();
-    if (World)
-    {
-        auto PlayerController = World->GetFirstPlayerController();
-        if (PlayerController)
-        {
-            FInputModeUIOnly InputModeData;
-            InputModeData.SetWidgetToFocus(TakeWidget());
-            InputModeData.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-            PlayerController->SetInputMode(InputModeData);
-            PlayerController->SetShowMouseCursor(true);
-        }
-    }
 
     UGameInstance *GameInstance = GetGameInstance();
 
@@ -51,7 +37,9 @@ void UMenu::HostButtonClicked()
     HostButton->SetIsEnabled(false);
     if (MultiplayerSessionsSubsystem)
     {
-        MultiplayerSessionsSubsystem->CreateSession(NumPublicConnections, MatchType);
+        FText MatchTypeInternalName = FText::TrimPrecedingAndTrailing(TxtTypeOfMatch->GetText()).IsEmpty() ? FText::FromString(MatchType) : TxtTypeOfMatch->GetText();
+
+        MultiplayerSessionsSubsystem->CreateSession(NumPublicConnections, MatchTypeInternalName.ToString());
 
         if (GEngine)
         {
@@ -94,24 +82,6 @@ bool UMenu::Initialize()
     return true;
 }
 
-void UMenu::MenuTearDown()
-{
-    RemoveFromParent();
-    UWorld *World = GetWorld();
-    if (World)
-    {
-        APlayerController *PlayerController = World->GetFirstPlayerController();
-        FInputModeGameOnly InputModeData;
-        PlayerController->SetInputMode(InputModeData);
-        PlayerController->SetShowMouseCursor(false);
-    }
-}
-
-void UMenu::OnLevelRemovedFromWorld(ULevel *InLevel, UWorld *InWorld)
-{
-    MenuTearDown();
-    Super::OnLevelRemovedFromWorld(InLevel, InWorld);
-}
 
 void UMenu::OnCreateSession(bool bWasSuccess)
 {

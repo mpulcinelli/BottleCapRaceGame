@@ -13,7 +13,8 @@ class BOTTLECAPRACEGAME_API ABottleCapPlayerPawn : public APawn
 
 public:
 	// Sets default values for this pawn's properties
-	ABottleCapPlayerPawn();
+
+	ABottleCapPlayerPawn(const FObjectInitializer &ObjectInitializer = FObjectInitializer::Get());
 
 	UPROPERTY(EditAnywhere, Replicated)
 	class UStaticMeshComponent *SphereVisual;
@@ -27,8 +28,14 @@ public:
 	UPROPERTY(EditAnywhere)
 	class UWidgetComponent *AccumulatorVisual;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Replicated)
 	class UCameraComponent *Camera;
+
+	UPROPERTY(EditAnywhere)
+	class USpringArmComponent *SpringArm;
+
+	UPROPERTY(EditAnywhere)
+	class UNiagaraComponent *MyTurnIndicatorEffect;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Input)
 	float PowerRateAccumulator = 0.5f;
@@ -47,13 +54,14 @@ public:
 	void Server_ProvokeImpulse_Implementation(FVector Impulse);
 
 	UFUNCTION(Server, Reliable)
+	void Server_ResetLocation(FVector Location);
+	void Server_ResetLocation_Implementation(FVector Location);
+
+	UFUNCTION(Server, Reliable)
 	void Server_Turn(FRotator AxisValue);
 	void Server_Turn_Implementation(FRotator AxisValue);
 	void Turn(float AxisValue);
 
-	UFUNCTION(Server, Reliable)
-	void Server_LookUp(FRotator AxisValue);
-	void Server_LookUp_Implementation(FRotator AxisValue);
 	void LookUp(float AxisValue);
 
 	UFUNCTION(Server, Reliable)
@@ -92,8 +100,11 @@ private:
 	UPROPERTY(EditAnywhere)
 	class UDecalComponent *PointDirectionDecal;
 
-	UPROPERTY(Transient, ReplicatedUsing = OnRep_RotChange)
-	FRotator CurrentRotation;
+	UPROPERTY(Transient, ReplicatedUsing = OnRep_ActorRotChange)
+	FRotator CurrentActorRotation;
+
+	UPROPERTY()
+	FVector InitialLocation;
 
 	FTimerHandle AccumulatePowerHandle;
 
@@ -101,7 +112,7 @@ private:
 	int32 InternalId;
 
 	UFUNCTION()
-	void OnRep_RotChange();
+	void OnRep_ActorRotChange();
 
 	UFUNCTION()
 	void OnRep_RemainingMoves();
@@ -109,9 +120,16 @@ private:
 	UFUNCTION()
 	void OnRep_ChangeInternalId();
 
+	UFUNCTION()
+	void OnOverlapOtherComponent(UPrimitiveComponent *OverlappedComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult);
+
+	UFUNCTION()
+	void OnHitOtherComponent(UPrimitiveComponent *HitComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp, FVector NormalImpulse, const FHitResult &Hit);
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	virtual void Destroyed() override;
 
 	float TurnRateGamepad;
 

@@ -12,6 +12,7 @@ public class BottleCapRaceGame : ModuleRules
 															, "Json"
 															, "JsonUtilities"
 															, "UMG"
+															, "Niagara"
 															, "OnlineSubsystem"
 															, "OnlineSubsystemUtils"
 															, "OnlineSubsystemSteam" });

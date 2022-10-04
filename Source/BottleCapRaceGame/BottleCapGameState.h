@@ -15,14 +15,15 @@ class BOTTLECAPRACEGAME_API ABottleCapGameState : public AGameStateBase
 	GENERATED_BODY()
 
 public:
-
 	ABottleCapGameState();
 	~ABottleCapGameState() = default;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class APlayerState *CurrentPlayer;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 PlayerTurn;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 NumOfFlicks;
-
 };

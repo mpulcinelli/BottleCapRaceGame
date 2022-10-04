@@ -28,9 +28,13 @@ class BOTTLECAPRACEGAME_API UBottleCapGameInstance : public UGameInstance
 
 public:
 	UBottleCapGameInstance();
+	void SetupInputControllForUI();
+	void SetupInputControllForGame();
 
 
 protected:
+
+	virtual void LoadComplete(const float LoadTime, const FString& MapName) override;
 
 private:
 

@@ -16,87 +16,76 @@ ALobbyGameMode::ALobbyGameMode()
     PlayerStateClass = ABottleCapPlayerState::StaticClass();
     GameStateClass = ABottleCapGameState::StaticClass();
 }
-
+void ALobbyGameMode::StartPlay()
+{
+    Super::StartPlay();
+#if UE_BUILD_DEVELOPMENT
+    PRINT_LOG();
+#endif
+}
 void ALobbyGameMode::PostLogin(APlayerController *NewPlayer)
 {
     Super::PostLogin(NewPlayer);
 
+#if UE_BUILD_DEVELOPMENT
     PRINT_LOG();
+#endif
 
-    
-    if (HasAuthority())
+    if (CountPlayers == 2 )
     {
-
-        int32 NumberOfPlayers = GameState->PlayerArray.Num();
-
-        if (NumberOfPlayers == 2)
+        UWorld *World = GetWorld();
+        if (World)
         {
-
-            
-            for (auto &&i : GameState->PlayerArray)
-            {
-                PRINT_LOG_2("PlayerId", FString::FromInt(i->GetPlayerId()));
-            }
-            
-
-            UWorld *World = GetWorld();
-            if (World)
-            {
-                bUseSeamlessTravel = true;
-                World->ServerTravel("/Game/Maps/RaceMap?listen");
-            }
-        }
-        else
-        {
-            ABottleCapPlayerPawn *MyPawn = NewPlayer->GetPawn<ABottleCapPlayerPawn>();
-
-            if (!MyPawn)
-            {
-                PRINT_LOG_1("NO PAWN { ABottleCapPlayerPawn }");
-                return;
-            }
-
-            TArray<AActor *> OutPlayerStarts;
-            UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), OutPlayerStarts);
-
-            switch (NumberOfPlayers - 1)
-            {
-            case 0:
-            {
-                const FVector AcLocation = OutPlayerStarts[0]->GetActorLocation();
-                MyPawn->SetActorLocation(AcLocation);
-            }
-            break;
-            case 1:
-            {
-                const FVector AcLocation = OutPlayerStarts[1]->GetActorLocation();
-                MyPawn->SetActorLocation(AcLocation);
-            }
-            break;
-            case 2:
-            {
-                const FVector AcLocation = OutPlayerStarts[2]->GetActorLocation();
-                MyPawn->SetActorLocation(AcLocation);
-            }
-            break;
-            case 3:
-            {
-                const FVector AcLocation = OutPlayerStarts[3]->GetActorLocation();
-                MyPawn->SetActorLocation(AcLocation);
-            }
-            break;
-
-            default:
-                break;
-            }
+            bUseSeamlessTravel = true;
+            World->ServerTravel("/Game/Maps/RaceMap?listen");
         }
     }
 }
 
-void ALobbyGameMode::HandleStartingNewPlayer_Implementation(APlayerController *NewPlayer)
+AActor *ALobbyGameMode::ChoosePlayerStart_Implementation(AController *Player)
 {
-    Super::HandleStartingNewPlayer_Implementation(NewPlayer);
+    AActor *PlayStartFromSup = Super::ChoosePlayerStart_Implementation(Player);
 
+#if UE_BUILD_DEVELOPMENT
     PRINT_LOG();
+#endif
 
+    TArray<AActor *> OutPlayerStarts;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), OutPlayerStarts);
+
+#if UE_BUILD_DEVELOPMENT
+    PRINT_LOG_2("CountPlayers", FString::FromInt(CountPlayers));
+#endif
+
+    switch (CountPlayers)
+    {
+    case 0:
+    {
+        CountPlayers++;
+        return OutPlayerStarts[0];
+    }
+    break;
+    case 1:
+    {
+        CountPlayers++;
+        return OutPlayerStarts[1];
+    }
+    break;
+    case 2:
+    {
+        CountPlayers++;
+        return OutPlayerStarts[2];
+    }
+    break;
+    case 3:
+    {
+        CountPlayers++;
+        return OutPlayerStarts[3];
+    }
+    break;
+
+    default:
+        return PlayStartFromSup;
+        break;
+    }
 }

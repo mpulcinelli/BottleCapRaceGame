@@ -40,11 +40,17 @@ public:
 	UFUNCTION(Category = "Game Strategy")
 	virtual void MoveCap();
 
+	UFUNCTION(Category = "Game Strategy")
+	virtual void GoNextPlayer();
+
 protected:
 	virtual void StartPlay() override;
-
-	virtual void PostLogin(APlayerController* NewPlayer) override;
-	
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
+	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
+	virtual void PostSeamlessTravel() override;
 
+private: 
+
+	int32 CountPlayers{0};
+	int32 IndexPlayer{0};
 };

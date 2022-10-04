@@ -18,7 +18,12 @@ public:
 	ALobbyGameMode();
 
 	virtual void PostLogin(APlayerController *NewPlayer) override;
+	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
+	virtual void StartPlay() override;
+	
 
-protected:
-	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;	
+private:
+
+	int32 CountPlayers{0};
+
 };
