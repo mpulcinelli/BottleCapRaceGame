@@ -11,6 +11,10 @@
 #include "GameFramework/PlayerStart.h"
 #include "BottleCapRaceGame/Helpers/FormatMessage.h"
 
+/**
+ * @brief Construct a new ABottleCapRaceGameGameModeBase::ABottleCapRaceGameGameModeBase object
+ * 
+ */
 ABottleCapRaceGameGameModeBase::ABottleCapRaceGameGameModeBase()
 {
     DefaultPawnClass = ABottleCapPlayerPawn::StaticClass();
@@ -18,6 +22,10 @@ ABottleCapRaceGameGameModeBase::ABottleCapRaceGameGameModeBase()
     GameStateClass = ABottleCapGameState::StaticClass();
 }
 
+/**
+ * @brief Método para iniciar o jogo.
+ * 
+ */
 void ABottleCapRaceGameGameModeBase::StartPlay()
 {
     Super::StartPlay();
@@ -25,6 +33,10 @@ void ABottleCapRaceGameGameModeBase::StartPlay()
     PRINT_LOG();
 }
 
+/**
+ * @brief Método executado após a viagem para o "Mundo" do jogo.
+ * 
+ */
 void ABottleCapRaceGameGameModeBase::PostSeamlessTravel()
 {
     Super::PostSeamlessTravel();
@@ -33,16 +45,30 @@ void ABottleCapRaceGameGameModeBase::PostSeamlessTravel()
     GetGameState<ABottleCapGameState>()->CurrentPlayer = GameState->PlayerArray[IndexPlayer];
 }
 
+/**
+ * @brief Recuperar o ID do player.
+ * 
+ * @return int32 
+ */
 int32 ABottleCapRaceGameGameModeBase::GetPlayerIdToPlay() const
 {
     return GameState->PlayerArray[IndexPlayer]->GetPlayerId();
 }
 
+/**
+ * @brief Recupera a quantidade de movimentos que ainda restam para o player poder jogar.
+ * 
+ * @return int32 
+ */
 int32 ABottleCapRaceGameGameModeBase::GetPlayerRemainingMoves() const
 {
     return GetGameState<ABottleCapGameState>()->NumOfFlicks;
 }
 
+/**
+ * @brief Efetua a contagem de movimentos do player.
+ * 
+ */
 void ABottleCapRaceGameGameModeBase::MoveCap()
 {
     int32 Num = GetGameState<ABottleCapGameState>()->NumOfFlicks;
@@ -54,7 +80,6 @@ void ABottleCapRaceGameGameModeBase::MoveCap()
     }
     else
     {
-        // int32 NextPlayer = GetGameState<ABottleCapGameState>()->PlayerTurn;
         GetGameState<ABottleCapGameState>()->NumOfFlicks = 3;
         int NumTotalPlayers = GameState->PlayerArray.Num();
         IndexPlayer++;
@@ -71,6 +96,10 @@ void ABottleCapRaceGameGameModeBase::MoveCap()
     }
 }
 
+/**
+ * @brief Força mover para o próximo player quando o player morre.
+ * 
+ */
 void ABottleCapRaceGameGameModeBase::GoNextPlayer()
 {
     int NumTotalPlayers = GameState->PlayerArray.Num();
@@ -87,6 +116,12 @@ void ABottleCapRaceGameGameModeBase::GoNextPlayer()
     OnChangeRemainingMoves.Broadcast(GetPlayerRemainingMoves());
 }
 
+/**
+ * @brief Sobrecarga do método de escolha do local de spawn do player.
+ * 
+ * @param Player 
+ * @return AActor* 
+ */
 AActor *ABottleCapRaceGameGameModeBase::ChoosePlayerStart_Implementation(AController *Player)
 {
     AActor *PlayStartFromSup = Super::ChoosePlayerStart_Implementation(Player);
@@ -135,6 +170,11 @@ AActor *ABottleCapRaceGameGameModeBase::ChoosePlayerStart_Implementation(AContro
     }
 }
 
+/**
+ * @brief Sobrecarga que executa antes do player ser "spawned" no mapa.
+ * 
+ * @param NewPlayer 
+ */
 void ABottleCapRaceGameGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController *NewPlayer)
 {
     Super::HandleStartingNewPlayer_Implementation(NewPlayer);

@@ -25,8 +25,11 @@
 #include "Engine/TriggerBox.h"
 #include "BottleCapRaceGame/BottleCapGameInstance.h"
 
-// Engine/Source/Runtime/Engine/Classes/GameFramework/KillZVolume.h
-
+/**
+ * @brief Construct a new ABottleCapPlayerPawn::ABottleCapPlayerPawn object
+ * 
+ * @param ObjectInitializer 
+ */
 ABottleCapPlayerPawn::ABottleCapPlayerPawn(const FObjectInitializer &ObjectInitializer)
 	: Super(ObjectInitializer)
 {
@@ -143,7 +146,10 @@ ABottleCapPlayerPawn::ABottleCapPlayerPawn(const FObjectInitializer &ObjectIniti
 	bAlwaysRelevant = true;
 }
 
-// Called when the game starts or when spawned
+/**
+ * @brief Método executado quando o jogo inicia.
+ * 
+ */
 void ABottleCapPlayerPawn::BeginPlay()
 {
 	Super::BeginPlay();
@@ -195,6 +201,16 @@ void ABottleCapPlayerPawn::BeginPlay()
 	SphereVisual->OnComponentHit.AddDynamic(this, &ABottleCapPlayerPawn::OnHitOtherComponent);
 }
 
+/**
+ * @brief Método executado quando o player passa por algum outro objeto.
+ * 
+ * @param OverlappedComponent 
+ * @param OtherActor 
+ * @param OtherComp 
+ * @param OtherBodyIndex 
+ * @param bFromSweep 
+ * @param SweepResult 
+ */
 void ABottleCapPlayerPawn::OnOverlapOtherComponent(UPrimitiveComponent *OverlappedComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult)
 {
 	if (OtherActor->GetClass() == ATriggerBox::StaticClass())
@@ -213,6 +229,15 @@ void ABottleCapPlayerPawn::OnOverlapOtherComponent(UPrimitiveComponent *Overlapp
 	}
 }
 
+/**
+ * @brief Método executado quando o player bate em algum outro objeto.
+ * 
+ * @param HitComponent 
+ * @param OtherActor 
+ * @param OtherComp 
+ * @param NormalImpulse 
+ * @param Hit 
+ */
 void ABottleCapPlayerPawn::OnHitOtherComponent(UPrimitiveComponent *HitComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp, FVector NormalImpulse, const FHitResult &Hit)
 {
 	if (OtherActor->GetClass() == ATriggerBox::StaticClass())
@@ -223,6 +248,11 @@ void ABottleCapPlayerPawn::OnHitOtherComponent(UPrimitiveComponent *HitComponent
 	}
 }
 
+/**
+ * @brief Atualiza o nome do player que será apresentado.
+ * 
+ * @param _MyName 
+ */
 void ABottleCapPlayerPawn::UpdateMyName(int32 _MyName)
 {
 #if UE_BUILD_DEVELOPMENT
@@ -236,6 +266,11 @@ void ABottleCapPlayerPawn::UpdateMyName(int32 _MyName)
 	}
 }
 
+/**
+ * @brief Atualiza a quantidade de movimentos que ainda estão faltando.
+ * 
+ * @param qtd 
+ */
 void ABottleCapPlayerPawn::Server_UpdatePlayerRemainingMoves_Implementation(int32 qtd)
 {
 	RemainingMoves = qtd;
@@ -258,6 +293,11 @@ void ABottleCapPlayerPawn::Server_UpdatePlayerRemainingMoves_Implementation(int3
 #endif
 }
 
+/**
+ * @brief Quando o player morre ele volta para o local de origem.
+ * 
+ * @param Location 
+ */
 void ABottleCapPlayerPawn::Server_ResetLocation_Implementation(FVector Location)
 {
 
@@ -275,6 +315,11 @@ void ABottleCapPlayerPawn::Server_ResetLocation_Implementation(FVector Location)
 	SetActorRotation(FRotator(0.0f));
 }
 
+/**
+ * @brief Faz com que o servidor provoque o impulso no cliente.
+ * 
+ * @param Impulse 
+ */
 void ABottleCapPlayerPawn::Server_ProvokeImpulse_Implementation(FVector Impulse)
 {
 	ABottleCapRaceGameGameModeBase *GM = Cast<ABottleCapRaceGameGameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
@@ -379,6 +424,11 @@ void ABottleCapPlayerPawn::IncrementAccumulation()
 	}
 }
 
+/**
+ * @brief Faz com que o servidor atualize o nome do cliente.
+ * 
+ * @param MyName 
+ */
 void ABottleCapPlayerPawn::Server_UpdateMyName_Implementation(const FText &MyName)
 {
 
@@ -391,16 +441,31 @@ void ABottleCapPlayerPawn::Server_UpdateMyName_Implementation(const FText &MyNam
 	PlayerName->SetText(_MyName);
 }
 
+/**
+ * @brief Recupera o widget com o acumulador visual.
+ * 
+ * @return UAccumulatorProgressWidget* 
+ */
 class UAccumulatorProgressWidget *ABottleCapPlayerPawn::GetAccumulatorProgressWidget() const
 {
 	return Cast<UAccumulatorProgressWidget>(AccumulatorVisual->GetWidget());
 }
 
+/**
+ * @brief Evento disparado pelo servidor para os clientes informando qual o ID deve poder se movimentar.
+ * 
+ * @param id 
+ */
 void ABottleCapPlayerPawn::OnServerChangePlayerToPlay(int32 id)
 {
 	CanIMoveMe = InternalId == id;
 }
 
+/**
+ * @brief Evento disparado pelo servidor para os clientes informando a quantidade de movimentos ainda estão disponíveis.
+ * 
+ * @param qtd 
+ */
 void ABottleCapPlayerPawn::OnServerChangeRemainingMoves(int32 qtd)
 {
 
@@ -424,6 +489,11 @@ void ABottleCapPlayerPawn::OnServerChangeRemainingMoves(int32 qtd)
 #endif
 }
 
+/**
+ * @brief Evento executado em cada frame do jogo.
+ * 
+ * @param DeltaTime 
+ */
 void ABottleCapPlayerPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -438,6 +508,10 @@ void ABottleCapPlayerPawn::SetupPlayerInputComponent(UInputComponent *PlayerInpu
 	PlayerInputComponent->BindAxis("LookUp", this, &ABottleCapPlayerPawn::LookUp);
 }
 
+/**
+ * @brief Método executado no cliente para replicação dos dados de quantidade de movimentos restantes.
+ * 
+ */
 void ABottleCapPlayerPawn::OnRep_RemainingMoves()
 {
 	if (IsLocallyControlled() && CanIMoveMe)
@@ -458,6 +532,10 @@ void ABottleCapPlayerPawn::OnRep_RemainingMoves()
 #endif
 }
 
+/**
+ * @brief Método executado no cliente para replicação dos dados de internal ID.
+ * 
+ */
 void ABottleCapPlayerPawn::OnRep_ChangeInternalId()
 {
 	const FText _MyName = FText::AsNumber(InternalId);
@@ -468,6 +546,10 @@ void ABottleCapPlayerPawn::OnRep_ChangeInternalId()
 #endif
 }
 
+/**
+ * @brief Método executado no cliente para ajustar a localização do ator no mapa.
+ * 
+ */
 void ABottleCapPlayerPawn::OnRep_ActorRotChange()
 {
 	if (!IsLocallyControlled())

@@ -10,6 +10,10 @@
 #include "GameFramework/PlayerStart.h"
 #include "BottleCapRaceGame/Helpers/FormatMessage.h"
 
+/**
+ * @brief Construct a new AMenuGameMode::AMenuGameMode object
+ * 
+ */
 AMenuGameMode::AMenuGameMode()
 {
 #if UE_BUILD_DEVELOPMENT
@@ -24,6 +28,11 @@ AMenuGameMode::AMenuGameMode()
 #endif
 }
 
+/**
+ * @brief Método executado depois do login ser efetuado no mapa.
+ * 
+ * @param NewPlayer 
+ */
 void AMenuGameMode::PostLogin(APlayerController *NewPlayer)
 {
     Super::PostLogin(NewPlayer);
@@ -34,6 +43,12 @@ void AMenuGameMode::PostLogin(APlayerController *NewPlayer)
 
 }
 
+
+/**
+ * @brief Sobrecarga que executa antes do player ser "spawned" no mapa.
+ * 
+ * @param NewPlayer 
+ */
 void AMenuGameMode::HandleStartingNewPlayer_Implementation(APlayerController *NewPlayer)
 {
     Super::HandleStartingNewPlayer_Implementation(NewPlayer);
@@ -43,6 +58,10 @@ void AMenuGameMode::HandleStartingNewPlayer_Implementation(APlayerController *Ne
 #endif
 }
 
+/**
+ * @brief Método para iniciar o jogo.
+ * 
+ */
 void AMenuGameMode::StartPlay()
 {
     Super::StartPlay();
@@ -52,6 +71,12 @@ void AMenuGameMode::StartPlay()
 #endif
 }
 
+/**
+ * @brief Reinicia o player em um local especifico.
+ * 
+ * @param NewPlayer 
+ * @param StartSpot 
+ */
 void AMenuGameMode::RestartPlayerAtPlayerStart(AController *NewPlayer, AActor *StartSpot)
 {
     Super::RestartPlayerAtPlayerStart(NewPlayer, StartSpot);
@@ -61,6 +86,13 @@ void AMenuGameMode::RestartPlayerAtPlayerStart(AController *NewPlayer, AActor *S
 #endif
 }
 
+
+/**
+ * @brief Sobrecarga do método de escolha do local de spawn do player.
+ * 
+ * @param Player 
+ * @return AActor* 
+ */
 AActor *AMenuGameMode::ChoosePlayerStart_Implementation(AController *Player)
 {
     Super::ChoosePlayerStart_Implementation(Player);

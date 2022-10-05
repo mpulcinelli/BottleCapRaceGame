@@ -2,6 +2,10 @@
 
 #include "BottleCapGameState.h"
 
+/**
+ * @brief Construct a new ABottleCapGameState::ABottleCapGameState object
+ * 
+ */
 ABottleCapGameState::ABottleCapGameState() : NumOfFlicks(3)
 {
     

@@ -10,12 +10,21 @@
 #include "GameFramework/PlayerStart.h"
 #include "BottleCapRaceGame/Helpers/FormatMessage.h"
 
+/**
+ * @brief Construct a new ALobbyGameMode::ALobbyGameMode object
+ * 
+ */
 ALobbyGameMode::ALobbyGameMode()
 {
     DefaultPawnClass = ABottleCapPlayerPawn::StaticClass();
     PlayerStateClass = ABottleCapPlayerState::StaticClass();
     GameStateClass = ABottleCapGameState::StaticClass();
 }
+
+/**
+ * @brief Método para iniciar o jogo.
+ * 
+ */
 void ALobbyGameMode::StartPlay()
 {
     Super::StartPlay();
@@ -23,6 +32,12 @@ void ALobbyGameMode::StartPlay()
     PRINT_LOG();
 #endif
 }
+
+/**
+ * @brief Método executado depois do login ser efetuado no mapa.
+ * 
+ * @param NewPlayer 
+ */
 void ALobbyGameMode::PostLogin(APlayerController *NewPlayer)
 {
     Super::PostLogin(NewPlayer);
@@ -42,6 +57,12 @@ void ALobbyGameMode::PostLogin(APlayerController *NewPlayer)
     }
 }
 
+/**
+ * @brief Sobrecarga do método de escolha do local de spawn do player.
+ * 
+ * @param Player 
+ * @return AActor* 
+ */
 AActor *ALobbyGameMode::ChoosePlayerStart_Implementation(AController *Player)
 {
     AActor *PlayStartFromSup = Super::ChoosePlayerStart_Implementation(Player);

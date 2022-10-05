@@ -7,7 +7,10 @@
 #include "Camera/CameraComponent.h"
 #include "BottleCapRaceGame/BottleCapGameInstance.h"
 
-// Sets default values
+/**
+ * @brief Construct a new AMenuPlayerPawn::AMenuPlayerPawn object
+ * 
+ */
 AMenuPlayerPawn::AMenuPlayerPawn()
 {
 	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -22,20 +25,10 @@ AMenuPlayerPawn::AMenuPlayerPawn()
 #endif
 }
 
-// Called when the game starts or when spawned
+
 void AMenuPlayerPawn::BeginPlay()
 {
 	Super::BeginPlay();
-
-	if (IsLocallyControlled())
-	{
-		// UBottleCapGameInstance *GI = GetGameInstance<UBottleCapGameInstance>();
-
-		// if (GI)
-		// {
-		// 	GI->SetupInputControllForUI();
-		// }
-	}
 
 #if UE_BUILD_DEVELOPMENT
 	PRINT_LOG();

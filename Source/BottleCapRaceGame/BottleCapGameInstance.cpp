@@ -7,10 +7,18 @@
 #include "OnlineSubsystemUtils.h"
 #include "BottleCapRaceGame/Helpers/FormatMessage.h"
 
+/**
+ * @brief Construct a new UBottleCapGameInstance::UBottleCapGameInstance object
+ * 
+ */
 UBottleCapGameInstance::UBottleCapGameInstance()
 {
 }
 
+/**
+ * @brief Ajusta os controles para o jogo.
+ * 
+ */
 void UBottleCapGameInstance::SetupInputControllForGame()
 {
 	if (UWorld *World = GetWorld())
@@ -30,6 +38,12 @@ void UBottleCapGameInstance::SetupInputControllForGame()
 #endif
 }
 
+/**
+ * @brief Executa quando o mapa é completamente carregado.
+ * 
+ * @param LoadTime 
+ * @param MapName 
+ */
 void UBottleCapGameInstance::LoadComplete(const float LoadTime, const FString &MapName)
 {
 	Super::LoadComplete(LoadTime, MapName);
@@ -48,6 +62,10 @@ void UBottleCapGameInstance::LoadComplete(const float LoadTime, const FString &M
 	}
 }
 
+/**
+ * @brief Ajusta os controles para usar o menu.
+ * 
+ */
 void UBottleCapGameInstance::SetupInputControllForUI()
 {
 	if (UWorld *World = GetWorld())
